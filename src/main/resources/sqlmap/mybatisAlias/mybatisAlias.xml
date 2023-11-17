@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+  PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+
+   <settings>
+      <setting name="mapUnderscoreToCamelCase" value="true"/>
+   </settings>
+   
+   <typeAliases>
+      <typeAlias type="kr.or.ddit.vo.EmpVO" alias="empVO"/>
+      <typeAlias type="kr.or.ddit.vo.Auth" alias="auth"/>
+      <typeAlias type="kr.or.ddit.vo.PaginationInfoVO" alias="pagingVO"/>
+      <typeAlias type="kr.or.ddit.vo.PaginationInfoVO" alias="asspagingVO"/>
+      <typeAlias type="kr.or.ddit.vo.TaskVO" alias="taskVO"/>
+      <typeAlias type="kr.or.ddit.vo.TkDetailVO" alias="tkDetailVO"/>
+      <typeAlias type="kr.or.ddit.vo.PortletVO" alias="portletVO"/>
+      <typeAlias type="kr.or.ddit.vo.AtStatusVO" alias="atStatusVO"/>
+      
+      <typeAlias type="kr.or.ddit.vo.AyannUsedVO" alias="ayannUsedVO"/>
+      <typeAlias type="kr.or.ddit.vo.AtrzFormVO" alias="atrzfVO"/>
+      <typeAlias type="kr.or.ddit.vo.DeptVO" alias="deptVO"/>
+      <typeAlias type="kr.or.ddit.vo.CodeVO" alias="codeVO"/>
+      
+      
+      <typeAlias type="kr.or.ddit.vo.ChatVO" alias="chatVO"/>
+      <typeAlias type="kr.or.ddit.vo.ChatMemberVO" alias="chatMemberVO"/>
+      <typeAlias type="kr.or.ddit.vo.ChatMemRoomVO" alias="chatMemRoomVO"/>
+      <typeAlias type="kr.or.ddit.vo.ChatRoomVO" alias="chatRoomVO"/>
+      <typeAlias type="kr.or.ddit.vo.chatSelectResultVO" alias="chatSelectResultVO"/>
+      <typeAlias type="kr.or.ddit.vo.ChatRoomDTLVO" alias="chatRoomDTLVO"/>
+      
+      <typeAlias type="kr.or.ddit.vo.BoardNoticeVO" alias="boardNoticeVO"/>
+      <typeAlias type="kr.or.ddit.vo.BoardFreeVO" alias="boardFreeVO"/>
+      <typeAlias type="kr.or.ddit.vo.BoardFeventVO" alias="boardFeventVO"/>
+      <typeAlias type="kr.or.ddit.vo.FileVO" alias="fileVO"/>
+      <typeAlias type="kr.or.ddit.vo.ClubVO" alias="clubVO"/>
+      <typeAlias type="kr.or.ddit.vo.ClubPostVO" alias="clubPostVO"/>
+      <typeAlias type="kr.or.ddit.vo.CommentVO" alias="commentVO"/>
+      <typeAlias type="kr.or.ddit.vo.ClubAllMemberVO" alias="clubAllMemberVO"/>
+      <typeAlias type="kr.or.ddit.vo.ClubMemberVO" alias="clubMemberVO"/>
+      <typeAlias type="kr.or.ddit.vo.ClubNotMemVO" alias="clubNotMemVO"/>
+      <typeAlias type="kr.or.ddit.vo.LikeVO" alias="likeVO"/>
+
+      <typeAlias type="kr.or.ddit.vo.ScheVO" alias="scheVO"/>
+      <typeAlias type="kr.or.ddit.vo.DraftVO" alias="draftVO"/>
+      <typeAlias type="kr.or.ddit.vo.AtrzPathVO" alias="pathVO"/>
+      <typeAlias type="kr.or.ddit.vo.DraftRefVO" alias="refVO"/>
+      <typeAlias type="kr.or.ddit.vo.MyAddGroupVO" alias="myAddGroupVO"/>
+      <typeAlias type="kr.or.ddit.vo.AddGroupMemberVO" alias="addGroupMemberVO"/>
+      <typeAlias type="kr.or.ddit.vo.ExtaddVO" alias="extaddVO"/>
+      <typeAlias type="kr.or.ddit.vo.TodoListVO" alias="todoListVO"/>
+      <typeAlias type="kr.or.ddit.vo.SeatResVO" alias="seatResVO"/>
+      <typeAlias type="kr.or.ddit.vo.AssRentVO" alias="assVO"/>
+      <typeAlias type="kr.or.ddit.vo.RoomResVO" alias="roomVO"/>
+      <typeAlias type="kr.or.ddit.vo.SalaryVO" alias="salaryVO"/>
+      <typeAlias type="kr.or.ddit.vo.DocHistoryVO" alias="docHistoryVO"/>
+      <typeAlias type="kr.or.ddit.vo.NotifyVO" alias="notifyVO"/>
+     
+      <typeAlias type="kr.or.ddit.vo.AppBookMarkVO" alias="abmVO"/>
+      <typeAlias type="kr.or.ddit.vo.AppBMLineVO" alias="abmLineVO"/>
+      
+      <typeAlias type="kr.or.ddit.vo.AttendVO" alias="attendVO"/>
+      <typeAlias type="kr.or.ddit.vo.AyannVO" alias="ayannVO"/>
+      <typeAlias type="kr.or.ddit.vo.FolderFileVO" alias="folderFileVO"/>
+      <typeAlias type="kr.or.ddit.vo.FolderVO" alias="folderVO"/>
+      <typeAlias type="kr.or.ddit.vo.RMailVO" alias="rmailVO"/>
+      <typeAlias type="kr.or.ddit.vo.SMailVO" alias="smailVO"/>
+      <typeAlias type="kr.or.ddit.vo.MailFormVO" alias="mailFormVO"/>
+      <typeAlias type="kr.or.ddit.vo.MailRecVO" alias="mailRecVO"/>
+   
+   </typeAliases>
+
+</configuration>

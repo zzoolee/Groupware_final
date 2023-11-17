@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.AddMapper">
+	
+	<resultMap type="myAddGroupVO" id="myAddGroupMap">
+		<id property="mygrCd" column="MYGR_CD"/>
+		<result property="mygrCd" column="MYGR_CD"/>
+		<result property="mygrName" column="MYGR_NAME"/>
+		<result property="mygrSe" column="MYGR_SE"/>
+		<collection property="groupMember" resultMap="addGroupMemberMap"/>
+<!-- 		<association property="groupMember" javaType="addGroupMemberVO"> -->
+<!-- 			<id property="mygrCd" column="MYGR_CD"/> -->
+<!-- 			<id property="mygrEmpno" column="MYGR_EMPNO"/> -->
+<!-- 			<result property="mygrCd" column="MYGR_CD"/> -->
+<!-- 			<result property="mygrEmpno" column="MYGR_EMPNO"/> -->
+<!-- 		</association> -->
+	</resultMap>
+	
+	<resultMap type="addGroupMemberVO" id="addGroupMemberMap">
+		<id property="mygrCd" column="MYGR_CD"/> <!-- id 지정 중요(데이터베이스에서 조인해서 가져올 때...) -->
+		<id property="mygrEmpno" column="MYGR_EMPNO"/>
+		<result property="mygrEmpno" column="MYGR_EMPNO"/>
+		<result property="rnum" column="rnum"/>
+		<association property="empVO" javaType="empVO">
+			<result property="empName" column="emp_name"/>
+			<result property="deptCd" column="dept_cd"/>
+			<result property="empRank" column="emp_rank"/>
+			<result property="empHp" column="emp_hp"/>
+			<result property="empEmail" column="emp_email"/>
+			<association property="deptVO" javaType="deptVO">
+				<result property="deptName" column="dept_name"/>
+			</association>
+			<association property="codeVO" javaType="codeVO">
+				<result property="cdName" column="cd_name"/>
+			</association>
+		</association>
+	</resultMap>
+	
+	<resultMap type="empVO" id="empMap">
+		<id property="empNo" column="EMP_NO"/> <!-- 기본키 설정 -->
+		<result property="empNo" column="EMP_NO"/>
+		<result property="empName" column="EMP_NAME"/>
+		<result property="empHp" column="EMP_HP"/>
+		<result property="empEmail" column="EMP_EMAIL"/>
+		<association property="deptVO" javaType="deptVO">
+			<result property="deptName" column="dept_name"/>
+		</association>
+		<association property="codeVO" javaType="codeVO">
+			<result property="cdName" column="cd_name"/>
+		</association>
+	</resultMap>
+	
+	<!-- 조직도 TREE(부서 부분) -->
+	<select id="selectTreeList" resultType="deptVO">
+		SELECT
+			dept_cd, NVL(to_char(dept_parent), '#') as dept_parent, dept_name, dept_icon
+		FROM DEPT
+	</select>
+	
+	<!-- 직원 생성시 실행 필요 -->
+	<insert id="createBasicGroup" parameterType="string">
+		INSERT INTO myaddgroup (
+	    	mygr_cd
+		    , mygr_name
+		    , emp_no
+		    , mygr_se
+		) VALUES (
+		    (SELECT NVL(MAX(TO_NUMBER(mygr_cd)),1000)+1 FROM myaddgroup)
+		  , '기본그룹'
+		  , #{empNo}
+		  , 'basic'
+		)
+	</insert>
+	
+	<select id="selectMyGroup" parameterType="string" resultType="myAddGroupVO">
+		SELECT
+		    mygr_cd
+		  , mygr_name
+		  , emp_no
+		  , mygr_se
+		FROM
+		    myaddgroup
+		WHERE
+		    emp_no = #{empNo}
+		order by mygr_cd
+	</select>
+	
+	<insert id="createNewGroup" parameterType="myAddGroupVO" useGeneratedKeys="true">
+		<selectKey keyProperty="mygrCd" resultType="string" order="BEFORE">
+			SELECT NVL(MAX(TO_NUMBER(mygr_cd)),1000)+1 FROM myaddgroup
+		</selectKey>
+		INSERT INTO myaddgroup (
+		    mygr_cd
+		    , mygr_name
+		    , emp_no
+		) VALUES (
+		    #{mygrCd}
+		  , #{mygrName}
+		  , #{empNo}
+		)
+	</insert>
+	
+	<insert id="insertGroupMember" parameterType="addGroupMemberVO">
+		INSERT INTO addgroupmember (
+		    mygr_cd
+		    , mygr_empno
+		) VALUES (
+		    #{mygrCd}
+		  , #{mygrEmpno}
+		)
+	</insert>
+	
+	<!-- 그룹에 이미 존재하는 직원인지 확인 -->
+	<select id="checkGroupMember" parameterType="addGroupMemberVO" resultType="addGroupMemberVO">
+		SELECT
+		    mygr_cd
+		  , mygr_empno
+		FROM
+		    addgroupmember
+		WHERE
+	    mygr_cd = #{mygrCd} and mygr_empno = #{mygrEmpno}
+	</select>
+	
+	<!-- 내부주소록 -->
+	<select id="selectMyAllGroupMember" parameterType="string" resultMap="myAddGroupMap">
+		SELECT
+		    g.mygr_cd, mygr_name, mygr_se, mygr_empno
+		    , emp_name, emp.dept_cd, dept_name, emp_rank, cd_name, emp_hp, emp_email
+		FROM
+		    myaddgroup g
+		    inner join ADDGROUPMEMBER m on g.mygr_cd = m.mygr_cd
+		    inner join emp on m.mygr_empno = emp.emp_no
+		    inner join dept on emp.dept_cd = dept.dept_cd
+		    inner join code on EMP_RANK = cd_cd
+		WHERE
+		    g.emp_no = #{empNo} and emp_workse = '1'
+	</select>
+	
+	<delete id="deleteGroupMember" parameterType="addGroupMemberVO">
+		DELETE FROM addgroupmember
+		WHERE
+	        mygr_cd = #{mygrCd}
+	    <if test="mygrEmpno != null">
+	    	AND mygr_empno = #{mygrEmpno}
+	    </if>
+	</delete>
+	
+	<delete id="deleteGroup" parameterType="string">
+	    DELETE FROM myaddgroup
+		WHERE
+		    mygr_cd = #{mygrCd}
+	</delete>
+	
+	<update id="updateGroup" parameterType="myAddGroupVO">
+	    UPDATE myaddgroup
+		SET
+		    mygr_name = #{mygrName}
+		WHERE
+	        mygr_cd = #{mygrCd}
+	</update>
+	
+	<!-- 외부주소록 -->
+	<select id="selectMyExtMember" parameterType="string" resultType="extaddVO">
+		SELECT
+		    ext_cd
+		  , ext_name
+		  , ext_hp
+		  , ext_email
+		  , ext_company
+		  , ext_rank
+		  , ext_tel
+		  , emp_no
+		FROM
+		    extadd
+		WHERE
+		    emp_no = #{empNo}
+	</select>
+	
+	<insert id="insertExtMember" parameterType="extaddVO">
+		INSERT INTO extadd (
+		    ext_cd
+		    , ext_name
+		    , ext_hp
+		    , ext_email
+		    , ext_company
+		    , ext_rank
+		    , ext_tel
+		    , emp_no
+		) VALUES (
+		    (SELECT NVL(MAX(TO_NUMBER(ext_cd)),1000)+1 FROM extadd)
+		  , #{extName}
+		  , #{extHp}
+		  , #{extEmail, jdbcType=VARCHAR}
+		  , #{extCompany}
+		  , #{extRank, jdbcType=VARCHAR}
+		  , #{extTel}
+		  , #{empNo}
+		)
+	</insert>
+	
+	<delete id="deleteExtMember" parameterType="extaddVO">
+		DELETE FROM extadd
+		WHERE
+		        ext_cd = #{extCd}
+		    AND emp_no = #{empNo}
+	</delete>
+	
+	<update id="updateExtMember" parameterType="extaddVO">
+		UPDATE extadd
+		SET
+			ext_name = #{extName}
+		    , ext_hp = #{extHp}
+		    , ext_email = #{extEmail, jdbcType=VARCHAR}
+		    , ext_company = #{extCompany}
+		    , ext_rank = #{extRank, jdbcType=VARCHAR}
+		    , ext_tel = #{extTel}
+		WHERE
+			ext_cd = #{extCd}
+	</update>
+	
+	<!-- 포틀릿용 최신 추가 직원 목록 -->
+	<select id="selectRecentMember" parameterType="string" resultMap="addGroupMemberMap">
+		SELECT b.*, row_number() over (order by rownum desc) rnum
+		FROM
+		(
+		    SELECT a.*, rownum
+		    FROM
+		    (
+		        SELECT distinct
+		            mygr_empno, emp_name, dept_name, cd_name, emp_hp, emp_email
+		        FROM
+		            myaddgroup g
+		            inner join ADDGROUPMEMBER m on g.mygr_cd = m.mygr_cd
+		            inner join emp on m.mygr_empno = emp.emp_no
+		            inner join dept on emp.dept_cd = dept.dept_cd
+		            inner join code on EMP_RANK = cd_cd
+		        WHERE
+		            g.emp_no = #{empNo} and emp_workse = '1'
+		     ) a
+		) b
+		<![CDATA[
+		WHERE rownum <= 6
+		]]>
+		order by rnum
+	</select>
+	
+	<select id="selectRecentMemberAdmin" resultMap="empMap">
+		SELECT b.*, row_number() over (order by rownum desc) rnum
+		FROM
+		(
+		    SELECT a.*, rownum
+		    FROM
+		    (
+		        SELECT
+		            emp_no, emp_name, dept_name, cd_name, emp_hp, emp_email
+		        FROM
+		            emp
+		            inner join dept on emp.dept_cd = dept.dept_cd
+		            inner join code on EMP_RANK = cd_cd
+		        WHERE
+		            emp_workse = '1'
+		     ) a
+		) b
+		<![CDATA[
+		WHERE rownum <= 6
+		]]>
+		order by rnum
+	</select>
+	
+</mapper>

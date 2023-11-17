@@ -1,0 +1,488 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.TaskMapper">
+
+	<resultMap type="taskVO" id="taskMap">
+		<id property="taskCd" column="task_cd"/>
+		<result property="taskTitle" column="task_title"/>
+		<result property="taskContent" column="task_content"/>
+		<result property="taskStartdate" column="task_startdate"/>
+		<result property="taskEnddate" column="task_enddate"/>
+		<result property="taskType" column="task_type"/>
+		<result property="taskMemo" column="task_memo"/>
+		<result property="myrole" column="myrole"/>
+		<collection property="tkDetailList" resultMap="tkDetailMap"/>
+	</resultMap>
+	
+	<resultMap type="tkDetailVO" id="tkDetailMap">
+		<id property="tdCd" column="td_cd"/>
+		<result property="tdContent" column="td_content"/>
+		<result property="tdStartdate" column="td_startdate"/>
+		<result property="tdEnddate" column="td_enddate"/>
+		<result property="tdClosedate" column="td_closedate"/>
+		<result property="tdMemo" column="td_memo"/>
+		<result property="tdStatusse" column="td_statusse"/>
+		<result property="tdEmpno" column="td_empno"/>
+	</resultMap>
+	
+	<sql id="taskSearch">
+		<if test="searchType != null and searchType == 'bef'"> <!-- 대기중 업무 -->
+			<![CDATA[ and to_char(task_startdate, 'yyyy-MM-dd') >= to_char(sysdate, 'yyyy-MM-dd') ]]>
+		</if>
+		<if test="searchType != null and searchType == 'ing'"><!-- 진행중 업무 -->
+			<![CDATA[ and to_char(task_startdate, 'yyyy-MM-dd') <= to_char(sysdate, 'yyyy-MM-dd')  ]]>
+			<![CDATA[ and to_char(task_enddate, 'yyyy-MM-dd') >= to_char(sysdate, 'yyyy-MM-dd')  ]]>
+		</if>
+		<if test="searchType != null and searchType == 'end'"><!-- 기간종료된 업무 -->
+			<![CDATA[ and to_char(task_enddate, 'yyyy-MM-dd') <= to_char(sysdate, 'yyyy-MM-dd') ]]>
+		</if>
+		<if test="searchType != null and searchType == 'allsel'"></if><!-- 모든 업무 -->
+	</sql>
+
+	<!-- 세부업무를 담당하지 않는 팀원 -->
+	<select id="notWorkEmpList" parameterType="string" resultType="taskVO">
+		select tkcharge.task_cd, tkcharge.emp_no as td_empno, emp.emp_name, emp.emp_photo from tkcharge
+		left outer join emp on emp.emp_no = tkcharge.emp_no
+		where tkcharge.task_cd = #{taskCd}
+		minus
+		select distinct task_cd, td_empno, emp.emp_name, emp.emp_photo from tkdetail
+		left outer join emp on emp.emp_no = tkdetail.td_empno
+		where task_cd = #{taskCd}
+	</select>
+	
+	<!-- 페이징을 위한 내 업무 카운트 -->
+	<select id="taskCount" parameterType="pagingVO" resultType="int">
+		SELECT COUNT(*) FROM (
+	      	SELECT distinct 
+                task.TASK_CD,
+			    task.TASK_TITLE,
+			    task.TASK_CONTENT,
+			    task.TASK_STARTDATE,
+			    task.TASK_ENDDATE,
+			    task.TASK_TYPE,
+			    task.TASK_MEMO,
+			    task.EMP_NO
+			FROM task
+			LEFT OUTER JOIN TKCHARGE tc ON task.task_Cd = tc.task_Cd
+			WHERE (task.emp_no =  #{empNo} OR  #{empNo} IN (SELECT emp_no FROM TKCHARGE WHERE task_Cd = task.task_Cd))
+			<include refid="taskSearch"/>
+			GROUP BY task.TASK_CD, task.TASK_TITLE, task.TASK_CONTENT, task.TASK_STARTDATE, task.TASK_ENDDATE, task.TASK_TYPE, task.TASK_MEMO, task.EMP_NO)
+	</select>
+
+	<!-- 내 업무 목록 - 페이징X -->
+	<select id="selectTaskList" parameterType="string" resultType="taskVO">
+	    <![CDATA[
+	      SELECT 
+			    a.TASK_CD,
+			    a.TASK_TITLE,
+			    a.TASK_CONTENT,
+			    a.TASK_STARTDATE,
+			    a.TASK_ENDDATE,
+			    a.TASK_TYPE,
+			    a.TASK_MEMO,
+			    a.EMP_NO,
+			    LISTAGG(b.emp_no, ', ') WITHIN GROUP (ORDER BY b.emp_no) AS team_emp,
+			    (SELECT COUNT(DECODE(td_statusse, 'y', 1)) FROM tkdetail WHERE task_cd = a.TASK_CD) AS td_ychk,
+			    (SELECT COUNT(td_statusse) FROM tkdetail WHERE task_cd = a.TASK_CD) AS td_totchk,
+			    (select c.emp_photo from emp c where a.emp_no = c.emp_no OR c.emp_no = a.emp_no) as emp_photo
+			FROM task a 
+			LEFT OUTER JOIN tkcharge b ON a.task_Cd = b.task_Cd
+			WHERE a.emp_no = #{empNo} OR #{empNo} IN (SELECT emp_no FROM tkcharge WHERE task_Cd = a.task_Cd)
+			HAVING  to_char(task_startdate, 'yyyy-MM-dd') < to_char(sysdate, 'yyyy-MM-dd') 
+			and to_char(task_startdate, 'yyyy-MM-dd') <= to_char(sysdate, 'yyyy-MM-dd')
+			and to_char(task_enddate, 'yyyy-MM-dd') >= to_char(sysdate, 'yyyy-MM-dd')
+			GROUP BY a.TASK_CD, a.TASK_TITLE, a.TASK_CONTENT, a.TASK_STARTDATE, a.TASK_ENDDATE, a.TASK_TYPE, a.TASK_MEMO, a.EMP_NO
+			ORDER BY a.TASK_ENDDATE desc
+	    ]]>
+	</select>
+	
+	<!-- 내 업무 목록 - 페이징O -->
+	<select id="selectTaskListPaging" parameterType="pagingVO" resultType="taskVO">
+	  <![CDATA[
+		select
+			b.*
+		from (
+	      SELECT 
+	      		a.*, row_number() over (order by a.task_cd desc) rnum
+	      FROM (
+	      	SELECT
+			    task.TASK_CD,
+			    task.TASK_TITLE,
+			    task.TASK_CONTENT,
+			    task.TASK_STARTDATE,
+			    task.TASK_ENDDATE,
+			    task.TASK_TYPE,
+			    task.TASK_MEMO,
+			    task.EMP_NO,
+		     		
+			    LISTAGG(tc.emp_no, ', ') WITHIN GROUP (ORDER BY tc.emp_no) AS team_emp,
+			    
+			    (SELECT COUNT(DECODE(td_statusse, 'y', 1)) FROM TKDETAIL WHERE task_cd = task.TASK_CD) AS td_ychk,
+			    (SELECT COUNT(td_statusse) FROM TKDETAIL WHERE task_cd = task.TASK_CD) AS td_totchk,
+			    (select c.emp_photo from EMP c where task.emp_no = c.emp_no OR c.emp_no = task.EMP_NO) as emp_photo
+	  ]]>
+			FROM task
+			LEFT OUTER JOIN TKCHARGE tc ON task.task_Cd = tc.task_Cd
+			WHERE task.emp_no = #{empNo} OR #{empNo} IN (SELECT emp_no FROM TKCHARGE WHERE task_Cd = task.task_Cd)
+			GROUP BY task.TASK_CD, task.TASK_TITLE, task.TASK_CONTENT, task.TASK_STARTDATE, task.TASK_ENDDATE, task.TASK_TYPE, task.TASK_MEMO, task.EMP_NO
+			HAVING 1=1
+			<include refid="taskSearch"/>
+			) a
+		) b
+		 <![CDATA[
+		where b.rnum >= #{startRow} and b.rnum <= #{endRow}
+		]]>
+		ORDER BY TASK_ENDDATE desc
+	</select>
+
+	<!-- 세부업무 상태(y-작업완료, n-작업중)를 가져옴 -->
+	<select id="selectTaskStatList" parameterType="taskVO" resultType="taskVO">
+		SELECT
+			task_cd, td_statusse, a.EMP_NO,
+		FROM TKDETAIL
+		where a.emp_no = #{empNo} OR #{empNo} IN (SELECT emp_no FROM tkcharge WHERE task_Cd = a.task_Cd)
+	</select>	
+	
+	<!-- 업무 등록 -->
+	<insert id="insertTask" parameterType="taskVO" >
+		<selectKey keyProperty="taskCd" resultType="string" order="BEFORE">
+			SELECT NVL(MAX(TO_NUMBER(task_cd)), 0) + 1 FROM task
+		</selectKey>
+	    INSERT INTO task (
+	        TASK_CD, TASK_TITLE, TASK_CONTENT, TASK_STARTDATE, TASK_ENDDATE, TASK_TYPE, TASK_MEMO, EMP_NO
+	    ) VALUES (
+	        #{taskCd}, #{taskTitle}, #{taskContent}, #{taskStartdate}, #{taskEnddate}, #{taskType}, #{taskMemo}, #{empNo}
+	    )
+	</insert>
+	<!-- 업무 등록시에 팀원을 같이 등록 -->
+	<insert id="insertTeamEmp" parameterType="taskVO">
+		<selectKey keyProperty="taskCd" resultType="string" order="BEFORE">
+			SELECT NVL(MAX(TO_NUMBER(task_cd)), 0) FROM task
+		</selectKey>
+        INSERT  ALL 
+	    <foreach collection="teamEmpList" item="empNo">
+	        INTO TKCHARGE (TASK_CD, EMP_NO) VALUES (#{taskCd}, #{empNo})
+	    </foreach>
+    	SELECT*FROM DUAL
+	</insert>
+<!-- 	<insert id="insertTeamEmp" parameterType="taskVO"> -->
+<!-- 	        INSERT  ALL  -->
+<!-- 	    <foreach collection="teamEmpList" item="empNo"> -->
+<!-- 	        INTO TKCHARGE (TASK_CD, EMP_NO) VALUES ((SELECT NVL(MAX(TO_NUMBER(task_cd)), 0) FROM task), #{empNo}) -->
+<!-- 	    </foreach> -->
+<!-- 	    	SELECT*FROM DUAL -->
+<!-- 	</insert> -->
+
+
+
+<!-- 	<insert id="insertTask" parameterType="taskVO" useGeneratedKeys="true" keyProperty="taskCd"> -->
+<!-- 	    INSERT INTO task ( -->
+<!-- 	        TASK_CD, TASK_TITLE, TASK_CONTENT, TASK_STARTDATE, TASK_ENDDATE, TASK_TYPE, TASK_MEMO, EMP_NO -->
+<!-- 	    ) VALUES ( -->
+<!-- 	        (SELECT NVL(MAX(TO_NUMBER(task_cd)), 0) + 1 FROM task),  -->
+<!-- 	        #{taskTitle}, #{taskContent}, #{taskStartdate}, #{taskEnddate}, #{taskType}, #{taskMemo}, #{empNo} -->
+<!-- 	    ) -->
+<!-- 	</insert> -->
+<!-- 	<insert id="insertTeamEmp" parameterType="taskVO"> -->
+<!-- 	    INSERT INTO TKCHARGE (TASK_CD, EMP_NO) -->
+<!-- 	    VALUES -->
+<!-- 	    <foreach collection="teamEmpList" item="empNo" separator=","> -->
+<!-- 	        (#{taskCd}, #{empNo}) -->
+<!-- 	    </foreach> -->
+<!-- 	</insert> -->
+	
+	<!-- 선택한 업무의 정보를 가져옴 -->
+	<select id="selectTask" parameterType="taskVO" resultType="taskVO">
+		<![CDATA[
+		SELECT 
+		    a.TASK_CD,
+		    a.TASK_TITLE,
+		    a.TASK_CONTENT,
+		    a.TASK_STARTDATE,
+		    a.TASK_ENDDATE,
+		    a.TASK_TYPE,
+		    a.TASK_MEMO,
+		    a.EMP_NO as charge_emp, 
+		   	(select c.emp_photo from emp c where a.emp_no = c.emp_no OR c.emp_no = a.emp_no) as emp_photo,
+		   	(select c.emp_name from emp c where a.emp_no = c.emp_no OR c.emp_no = a.emp_no) as emp_name,
+		    LISTAGG(b.emp_no, ', ') WITHIN GROUP (ORDER BY b.emp_no) AS team_emp
+		FROM task a 
+		LEFT OUTER JOIN tkcharge b ON a.task_Cd = b.task_Cd
+		LEFT OUTER JOIN emp c ON b.emp_no = c.EMP_NO
+		WHERE a.task_cd = #{taskCd}
+		GROUP BY a.TASK_CD, a.TASK_TITLE, a.TASK_CONTENT, a.TASK_STARTDATE, a.TASK_ENDDATE, a.TASK_TYPE, a.TASK_MEMO, a.EMP_NO
+		ORDER BY TO_NUMBER(task_cd)  
+	    ]]>
+	</select>
+	
+	<!-- 업무 삭제를 위한 세부업무 삭제 -->
+	<delete id="deleteTdForTask" parameterType="taskVO">
+		DELETE TKDETAIL
+		WHERE TASK_CD = #{taskCd}
+	</delete>
+	<!-- 업무 삭제 -->
+	<delete id="deleteTask" parameterType="taskVO">
+		DELETE TASK
+		WHERE TASK_CD = #{taskCd}
+	</delete>
+	
+	<!-- 업무 상세에서 세부업무 목록 가져오기 -->
+	<select id="selectDetTaskList" parameterType="taskVO" resultType="taskVO">
+		SELECT
+			td_cd, task_cd, td_content, td_startdate, td_enddate, td_closedate, td_memo, td_statusse, td_empno, e.emp_photo as td_empphoto, E.EMP_NAME as TD_EMPNAME
+		FROM TKDETAIL
+		LEFT OUTER JOIN EMP e ON (td_empno = e.emp_no)
+		where task_cd = #{taskCd}
+		ORDER BY td_closedate desc
+	</select>	
+
+	<!-- 업무에서 팀원들 가져오기(책임자, 팀원) -->
+	<select id="selectTeamEmpList" parameterType="taskVO" resultType="taskVO">
+		select 
+		    A.emp_no, e.emp_photo, e.emp_name		
+		from TKCHARGE A
+		LEFT OUTER JOIN EMP E ON A.EMP_NO = E.EMP_NO
+		where task_cd = #{taskCd}
+	</select>	
+<!-- 	<select id="selectNoTdEmpList" parameterType="taskVO" resultType="taskVO"> -->
+<!-- 			SELECT DISTINCT -->
+<!-- 			    A.TASK_CD, A.EMP_NO, c.emp_photo -->
+<!-- 			FROM TKCHARGE A -->
+<!-- 			left outer join tkdetail b on a.task_Cd = b.task_cd -->
+<!-- 			left outer join emp c on c.emp_no = a.emp_no -->
+<!-- 			WHERE A.TASK_CD = #{taskCd} -->
+<!-- 			AND A.EMP_NO NOT IN (SELECT TD_EMPNO FROM TKDETAIL WHERE TASK_CD = #{taskCd}) -->
+<!-- 	</select> -->
+
+	<!-- 업무의 팀원 - 1이면 세부업무를 맡았고, 2이면 세부업무를 맡지 않았음 -->
+	<select id="TdSeparateEmpList" parameterType="taskVO" resultType="taskVO">
+		SELECT DISTINCT
+		    A.TASK_CD,
+		    A.EMP_NO ,
+		    C.EMP_NAME,
+		    C.EMP_PHOTO,
+		    case  when a.emp_no is not null then '1' end as status_emp
+		FROM TKCHARGE A
+		INNER JOIN TKDETAIL B ON A.EMP_NO = B.TD_EMPNO
+		INNER JOIN EMP C ON a.emp_no = C.EMP_NO
+		WHERE A.TASK_CD = #{taskCd}
+		AND A.TASK_CD = B.TASK_CD
+		
+		UNION
+		
+		SELECT DISTINCT
+		    A.TASK_CD,
+		    A.EMP_NO,
+		    C.EMP_NAME,
+		    C.EMP_PHOTO AS emp_photo,
+		    case  when a.emp_no is not null then '2' end as status_emp
+		FROM TKCHARGE A
+		LEFT JOIN TKDETAIL B ON A.TASK_CD = B.TASK_CD
+		LEFT JOIN EMP C ON C.EMP_NO = A.EMP_NO
+		WHERE A.TASK_CD = #{taskCd}
+		AND A.EMP_NO NOT IN (SELECT TD_EMPNO FROM TKDETAIL WHERE TASK_CD = #{taskCd})						
+	</select>
+	
+	<!-- 세부업무 등록 -->
+	<insert id="insertdetTask" parameterType="taskVO">
+		INSERT INTO TKDETAIL(
+			TD_CD, TD_CONTENT, TD_STARTDATE, TD_CLOSEDATE, TD_MEMO, TASK_CD, TD_EMPNO
+		) VALUES(
+			(SELECT NVL(MAX(TO_NUMBER(TD_CD)), 0) + 1 FROM TKDETAIL), #{tdContent}, sysdate, #{tdClosedate}, #{tdMemo}, #{taskCd}, #{tdEmpno}
+		)
+	</insert>
+	
+	<!-- 세부업무 수정 -->
+	<update id="updateTask" parameterType="taskVO">
+		UPDATE TASK 
+		SET
+			TASK_TITLE = #{taskTitle},
+			TASK_STARTDATE = #{taskStartdate}, 
+			TASK_ENDDATE = #{taskEnddate}, 
+			TASK_TYPE = #{taskType},
+			TASK_CONTENT = #{taskContent},
+			TASK_MEMO = #{taskMemo}
+		WHERE TASK_CD = #{taskCd}
+	</update>
+	<!-- 세부업무 수정할 때, 팀원 삭제 -->
+	<delete id="deletedTeamMembers" parameterType="taskVO">
+		DELETE FROM tkcharge WHERE task_cd = #{taskCd} AND emp_no IN
+	   <foreach collection="delEmpList" item="deletedTeamMembers" open="(" separator="," close=")">
+	     #{deletedTeamMembers}
+	   </foreach>
+	</delete>
+	<!-- 세부업무 수정할 때, 팀원 추가 -->
+	<insert id="insertTdTeamEmp" parameterType="taskVO">
+		INSERT  ALL 
+	    <foreach collection="teamEmpList" item="empNo">
+	        INTO TKCHARGE (TASK_CD, EMP_NO) VALUES (#{taskCd}, #{empNo})
+	    </foreach>
+    	SELECT*FROM DUAL
+	</insert>
+	
+	<!-- 세부업무를 작업중으로 처리 -->
+	<update id="turnNChk" parameterType="taskVO">
+		UPDATE TKDETAIL 
+		SET
+			TD_STATUSSE = 'n',
+			TD_ENDDATE = ''
+		WHERE TD_CD = #{tdCd}
+	</update>
+	<!-- 세부업무를 작업완료로 처리 -->
+	<update id="turnYChk" parameterType="taskVO">
+		UPDATE TKDETAIL 
+		SET
+			TD_STATUSSE = 'y',
+			TD_ENDDATE = SYSDATE
+		WHERE TD_CD = #{tdCd}
+	</update>
+	<!-- 나의 세부업무 목록에서의 세부업무 수정?? -->
+	<update id="updateChk" parameterType="taskVO">
+		UPDATE TKDETAIL 
+		SET
+			TD_CONTENT = #{tdContent},
+			TD_MEMO = #{tdMemo}
+		WHERE TD_CD = #{tdCd}
+	</update>
+	
+	<!-- 세부업무 삭제 -->
+	<delete id="deleteTd" parameterType="taskVO">
+		DELETE TKDETAIL
+		WHERE TASK_CD = #{taskCd} and td_cd = #{tdCd}
+	</delete>
+	<!-- 세부업무 수정 모달에서의 수정 -->
+	<update id="updateTd" parameterType="taskVO">
+		UPDATE TKDETAIL 
+		SET
+			TD_CONTENT = #{tdContent},
+			TD_MEMO = #{tdMemo},
+			TD_CLOSEDATE = #{tdClosedate},
+			TD_EMPNO = #{tdEmpno}
+		WHERE TD_CD = #{tdCd}
+	</update>
+	
+	<!-- 나의 세부업무  -->
+    <select id="selectMyTkDetailList" parameterType="string" resultMap="taskMap">
+    	select 
+		    t.task_cd
+		    , task_title
+		    , task_type
+		    , task_startdate
+		    , task_enddate
+		    , myrole
+		    , td_cd
+		    , td_content
+		    , td_startdate
+		    , td_closedate
+		    , td_enddate
+		    , td_memo
+		    , td_statusse
+		    , td_empno
+		from
+		    (
+		        select distinct
+		            task.task_cd
+		            , task_title
+		            , task_type
+		            , task_startdate
+		            , task_enddate
+		            , case when task.emp_no = #{empNo} then '책임자'
+		                when tkcharge.emp_no = #{empNo} then '팀원'
+		                end as myrole
+		        from
+		            task
+		            left outer join tkcharge on task.task_cd = tkcharge.task_cd
+		        where
+		            (task.emp_no = #{empNo} or tkcharge.emp_no = #{empNo})
+		            <![CDATA[
+		            and to_char(task_enddate,'yy/MM/dd') >= to_char(sysdate,'yy/MM/dd')
+		            ]]>
+		    ) t
+		    left outer join 
+		    (
+		        select 
+		            td_cd
+		            , td_content
+		            , td_startdate
+		            , td_closedate
+		            , td_enddate
+		            , td_memo
+		            , td_statusse
+		            , td_empno
+		            , task_cd
+		        from tkdetail
+		        where td_empno = #{empNo}
+		    ) d on d.task_cd = t.task_cd
+		order by task_enddate
+    </select>
+	
+	<!-- 관리자 페이지에서의 업무 목록 페이징을 위한, 업무 전체 카운트 -->
+	<select id="AdminTaskCount" parameterType="pagingVO" resultType="int">
+		SELECT COUNT(*) FROM TASK 
+		WHERE 1=1
+		<include refid="taskSearch"/>
+	</select>
+	<!-- 관리자 페이지에서의 업무 목록 페이징 -->
+	<select id="selectAdminTaskListPaging" parameterType="pagingVO" resultType="taskVO">
+	  <![CDATA[
+	    select b.*
+	    from (
+	        SELECT
+	            a.*,
+	            row_number() over (order by a.task_cd desc) rnum
+	        FROM (
+	            SELECT
+	                task.TASK_CD,
+	                task.TASK_TITLE,
+	                task.TASK_CONTENT,
+	                task.TASK_STARTDATE,
+	                task.TASK_ENDDATE,
+	                task.TASK_TYPE,
+	                task.TASK_MEMO,
+	                task.EMP_NO,
+	                LISTAGG(tc.emp_no, ', ') WITHIN GROUP (ORDER BY tc.emp_no) AS team_emp,
+	                (SELECT COUNT(DECODE(td_statusse, 'y', 1)) FROM TKDETAIL WHERE task_cd = task.TASK_CD) AS td_ychk,
+	                (SELECT COUNT(td_statusse) FROM TKDETAIL WHERE task_cd = task.TASK_CD) AS td_totchk,
+	                (select c.emp_photo from EMP c where task.emp_no = c.emp_no OR c.emp_no = task.EMP_NO) as emp_photo
+	            FROM task
+	            LEFT OUTER JOIN TKCHARGE tc ON task.task_Cd = tc.task_Cd
+	            GROUP BY task.TASK_CD, task.TASK_TITLE, task.TASK_CONTENT, task.TASK_STARTDATE, task.TASK_ENDDATE, task.TASK_TYPE, task.TASK_MEMO, task.EMP_NO
+	            HAVING 1=1
+		]]>
+		<include refid="taskSearch"/>
+	        ) a
+	    ) b
+	    <![CDATA[
+	    where b.rnum >= #{startRow} and b.rnum <= #{endRow}
+	    ]]>
+	    ORDER BY TASK_ENDDATE desc
+	</select>
+
+	<!-- 관리자 포틀릿 목록 - 진행중 -->
+	<select id="portletAdminTaskList" parameterType="taskVO" resultType="taskVO">
+		SELECT
+		    task.TASK_CD,
+		    task.TASK_TITLE,
+		    task.TASK_CONTENT,
+		    task.TASK_STARTDATE,
+		    task.TASK_ENDDATE,
+		    task.TASK_TYPE,
+		    task.TASK_MEMO,
+		    task.EMP_NO,
+		    LISTAGG(tc.emp_no, ', ') WITHIN GROUP (ORDER BY tc.emp_no) AS team_emp,
+		    (SELECT COUNT(DECODE(td_statusse, 'y', 1)) FROM TKDETAIL WHERE task_cd = task.TASK_CD) AS td_ychk,
+		    (SELECT COUNT(td_statusse) FROM TKDETAIL WHERE task_cd = task.TASK_CD) AS td_totchk,
+		    (select c.emp_photo from EMP c where task.emp_no = c.emp_no OR c.emp_no = task.EMP_NO) as emp_photo
+		FROM task
+		LEFT OUTER JOIN TKCHARGE tc ON task.task_Cd = tc.task_Cd
+		GROUP BY task.TASK_CD, task.TASK_TITLE, task.TASK_CONTENT, task.TASK_STARTDATE, task.TASK_ENDDATE, task.TASK_TYPE, task.TASK_MEMO, task.EMP_NO
+		<![CDATA[
+		HAVING to_char(task_startdate, 'yyyy-MM-dd') <= to_char(sysdate, 'yyyy-MM-dd')
+		and to_char(task_enddate, 'yyyy-MM-dd') >= to_char(sysdate, 'yyyy-MM-dd')
+		]]>  
+	</select>
+	
+</mapper>
+

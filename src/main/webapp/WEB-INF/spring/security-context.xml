@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+	
+	<bean id="bcryPasswordEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder"/>
+	<bean id="customLoginSuccess" class="kr.or.ddit.security.CustomLoginSuccessHandler"/><!-- 로그인 성공 처리자 빈 -->
+	<bean id="customUserDetailsService" class="kr.or.ddit.security.CustomUserDetailsService"/> <!-- UserDetailsService 재정의 -->
+	
+	<security:http>
+		<!-- 폼 기반 인증 기능을 사용한다. -->
+		<security:form-login login-page="/login" authentication-success-handler-ref="customLoginSuccess"/><!-- 로그인 성공시 -->
+		
+		<!-- 아이디 기억하기 설정, 쿠키의 유효기간 7일(604800) -->
+		<security:remember-me data-source-ref="dataSource" token-validity-seconds="604800"/>
+		<security:logout logout-url="/logout" invalidate-session="true" delete-cookies="remember-me, JSESSOIN_ID"/>
+		
+		<!-- 접근 거부 처리자의 URI를 지정 -->
+		<security:access-denied-handler error-page="/accessError"/>
+		
+		<security:csrf disabled="true"/>
+	</security:http>
+	
+	<security:authentication-manager>
+		<security:authentication-provider user-service-ref="customUserDetailsService">
+<!-- 		<security:authentication-provider> -->
+			<!-- 지정한 아이디와 패스워드로 로그인이 가능하도록 설정 -->
+<!-- 			<security:user-service> -->
+<!-- 				<security:user name="member" password="{noop}1234" authorities="ROLE_MEMBER"/> -->
+<!-- 				<security:user name="admin" password="{noop}1234" authorities="ROLE_MEMBER, ROLE_ADMIN"/> -->
+<!-- 			</security:user-service> -->
+			<!-- 사용자 테이블을 이용한 인증/인가 처리 -->
+<!-- 			<security:jdbc-user-service data-source-ref="dataSource" -->
+<!-- 				users-by-username-query="select emp_no, emp_pw, emp_workse from emp where emp_no = ?" -->
+<!-- 				authorities-by-username-query="select emp.emp_no, auth_level from emp, auth where emp.emp_no = auth.emp_no and emp.emp_no = ?"/> -->
+			<security:password-encoder ref="bcryPasswordEncoder"/>
+		</security:authentication-provider>
+	</security:authentication-manager>
+</beans>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.ChatTilesMapper">
+
+	<resultMap id="chatSelectResultMap" type="chatSelectResultVO">
+	    <id property="crNo" column="cr_no" />
+	    <result property="chatNo" column="chat_no" />
+	    <result property="chatDate" column="chat_date" />
+	    <result property="chatMsg" column="chat_msg" jdbcType="VARCHAR"/>
+	    <result property="empNo" column="emp_no" />
+	    <result property="crcmTitle" column="crcm_title" />
+	    <result property="crTitle" column="cr_title" />
+	    <result property="empName" column="emp_name" />
+	    <result property="empPhoto" column="emp_Photo" />
+	    <result property="deptCd" column="dept_cd" />
+	    <result property="deptName" column="dept_name" />
+	</resultMap>
+
+	<select id="selectRoomList" parameterType="String" resultType="chatSelectResultVO">
+		SELECT 
+		    C.CR_NO, C.CR_TITLE, CH.CHAT_NO, CH.CHAT_DATE
+		FROM CHATROOM C
+		JOIN CHAT CH ON C.CR_NO = CH.CR_NO
+		WHERE C.CR_TITLE LIKE '%' || #{crcmTitle} || '%'
+		ORDER BY CH.CHAT_DATE DESC
+	</select>
+
+	<select id="selectChatUserTiles" parameterType="String" resultType="empVO">
+		SELECT EMP_NO, EMP_NAME
+		FROM EMP
+		WHERE emp_No &lt;&gt; #{empNO}
+		ORDER BY EMP_NAME
+	</select>
+	
+	<select id="searchUsers" parameterType="String" resultType="empVO">
+		SELECT EMP_NO, EMP_NAME
+		FROM EMP
+		WHERE EMP_NAME LIKE '%' || #{empName} || '%'
+		ORDER BY EMP_NAME
+	</select>
+	
+	<select id="selectRecentChat" parameterType="String" resultType="String">
+		SELECT CR_NO
+		FROM (
+		    SELECT CH.CR_NO, MAX(TO_CHAR(CH.CHAT_DATE, 'YYYY-MM-DD HH24:MI:SS')) AS LATEST_CHAT_DATE
+		    FROM CHAT CH
+		    WHERE CH.CR_NO IN (
+		        SELECT CR_NO
+		        FROM CHATMEMBER
+		        WHERE EMP_NO = #{empNo}
+		    )
+		    GROUP BY CH.CR_NO
+		    ORDER BY MAX(CH.CHAT_DATE) DESC
+		)
+		WHERE ROWNUM = 1
+	</select>
+	
+</mapper>

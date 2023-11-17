@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.FeventMapper">
+
+	<select id="feventList" resultType="boardFeventVO">
+		SELECT to_number(FE_NO) as FE_NO, FE_TITLE, FE_CONTENT, FE_DATE, FE_HIT, FEWRITER_EMPNO
+		FROM FEVENT
+		ORDER BY FE_NO DESC
+	</select>
+
+	<select id="selectUserName" parameterType="String" resultType="String">
+		SELECT
+			EMP_NAME
+		FROM EMP
+		WHERE EMP_NO = #{empNo}
+	</select>
+	
+	<insert id="insertFevent" parameterType="boardFeventVO" useGeneratedKeys="true">
+		<selectKey keyProperty="feNo" resultType="String" order="BEFORE">
+			select fevent_sequence.nextval from dual
+		</selectKey>
+		insert into FEVENT (
+			FE_NO, FE_TITLE, FE_CONTENT, FE_DATE, FE_HIT, FEWRITER_EMPNO
+		) VALUES (
+			#{feNo}, #{feTitle}, #{feContent}, sysdate, 0 ,#{feWriterEmpNo}
+		)		
+	</insert>
+	
+	<select id="selectFevent" parameterType="String" resultType="boardFeventVO">
+		SELECT
+			FE_NO, FE_TITLE, FE_CONTENT, FE_DATE, FE_HIT, FEWRITER_EMPNO
+		FROM FEVENT
+		WHERE FE_NO = #{feNo}
+	</select>
+	
+	<update id="incrementHit" parameterType="String">
+		UPDATE fevent
+		SET
+			FE_HIT = FE_HIT + 1
+		WHERE FE_NO = #{feNo}
+	</update>
+	
+	<select id="selectUserPhoto" parameterType="String" resultType="String">
+		SELECT emp_photo
+		from emp
+		where emp_no = #{empNo}
+	</select>
+	
+	<update id="updateFevent" parameterType="boardFeventVO">
+		UPDATE fevent
+		SET 
+			FE_TITLE = #{feTitle},
+		    FE_CONTENT = #{feContent}
+		WHERE FE_NO = #{feNo}
+	</update>
+	
+	<delete id="deleteFevent" parameterType="String">
+		DELETE FROM fevent
+		WHERE FE_NO = #{feNo}
+	</delete>
+	
+	<delete id="deleteFeventComment" parameterType="String">
+		DELETE FROM "COMMENT"
+		WHERE CM_BOARDSE = #{cmBoardse} and CM_BNO = #{cmBno}
+	</delete>
+	
+</mapper>

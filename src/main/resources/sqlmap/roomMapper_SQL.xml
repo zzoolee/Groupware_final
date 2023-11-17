@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.RoomMapper">
+	
+	<sql id="roomDateSearch">
+		<if test="selectedDate != null">
+<!-- 		  AND rr_date = TO_DATE(#{selectedDate}, 'YYYY-MM-DD') -->
+			and substr(to_char(RR_DATE, 'yyyy-MM-dd HH:mm:ss'), 0, 10) = #{selectedDate}
+		</if>
+	</sql>
+	
+	<select id="selectMyRoomCount" parameterType="roomVO" resultType="int">
+		SELECT
+			count(roomres.ROOM_CD)
+		FROM 
+			roomres
+		INNER JOIN room on roomres.room_cd = room.room_cd
+		WHERE
+			emp_no = #{empNo}
+			<include refid="roomDateSearch"/>
+	</select>
+
+	<sql id="adminRoomDateSearch">
+		<if test="selectedDate != null">
+			WHERE substr(to_char(RR_DATE, 'yyyy-MM-dd HH:mm:ss'), 0, 10) = #{selectedDate}
+		</if>
+	</sql>
+	<select id="selectAdminRoomCount" parameterType="roomVO" resultType="int">
+		SELECT
+			count(ROOM_CD)
+		FROM 
+			roomres
+		<include refid="adminRoomDateSearch"/>
+	</select>
+	
+	<select id="selectRoomList" parameterType="roomVO" resultType="roomVO">
+		SELECT
+			room_cd
+			,room_name
+			,room_loc
+		FROM room
+		ORDER BY room_loc
+	</select>
+
+	<insert id="insertRoomres" parameterType="roomVO">
+		INSERT INTO ROOMRES (
+			RR_CD
+			,ROOM_CD
+			,RR_DATE
+			,RR_STARTTIME
+			,RR_ENDTIME
+			,RR_REASON
+			,EMP_NO
+		) VALUES (
+			(SELECT NVL(MAX(TO_NUMBER(RR_CD)), 0) + 1 FROM ROOMRES), #{roomCd}, sysdate, #{rrStarttime}, #{rrEndtime}, #{rrReason, jdbcType=VARCHAR}, #{empNo}
+		)
+	</insert>
+	
+	
+<!-- 	<select id="myRoomRsvList" parameterType="string" resultType="roomVO"> -->
+<!-- 		SELECT -->
+<!-- 			RR_CD -->
+<!-- 			,roomres.ROOM_CD -->
+<!-- 			,RR_DATE -->
+<!-- 			,RR_STARTTIME -->
+<!-- 			,RR_ENDTIME -->
+<!-- 			,RR_REASON -->
+<!-- 			,EMP_NO -->
+<!-- 			,room.ROOM_NAME -->
+<!-- 			,room.ROOM_LOC -->
+<!-- 		FROM  -->
+<!-- 			roomres -->
+<!-- 		INNER JOIN room on roomres.room_cd = room.room_cd -->
+<!-- 		WHERE -->
+<!-- 			emp_no = #{empNo} -->
+<!-- 		ORDER BY rr_date desc -->
+<!-- 	</select> -->
+
+	<select id="myRoomRsvPList" parameterType="pagingVO" resultType="roomVO">
+	select
+			b.*
+		from(
+			select
+				a.*, row_number() over (order by a.rr_cd desc) rnum
+			from(
+				SELECT
+					RR_CD
+					,roomres.ROOM_CD
+					,RR_DATE
+					,RR_STARTTIME
+					,RR_ENDTIME
+					,RR_REASON
+					,EMP_NO
+					,room.ROOM_NAME
+					,room.ROOM_LOC
+				FROM 
+					roomres
+				INNER JOIN room on roomres.room_cd = room.room_cd
+				WHERE
+					emp_no = #{empNo}
+					<include refid="roomDateSearch"/>
+				ORDER BY rr_date desc
+			) a
+		) b
+		<![CDATA[
+			where b.rnum >= #{startRow} and b.rnum <= #{endRow}
+			ORDER BY rr_date desc
+		]]>
+	</select>
+
+	<select id="adminRoomRsvPList" parameterType="pagingVO" resultType="roomVO">
+	select
+			b.*
+		from(
+			select
+				a.*, row_number() over (order by a.rr_cd desc) rnum
+			from(
+				SELECT
+				    RR_CD
+				    ,roomres.ROOM_CD
+				    ,roomres.RR_DATE
+				    ,roomres.RR_STARTTIME
+				    ,roomres.RR_ENDTIME
+				    ,roomres.RR_REASON
+				    ,roomres.EMP_NO
+				    ,room.ROOM_NAME
+				    ,room.ROOM_LOC
+				    ,emp_name||'('||roomres.emp_no||')/'||dept_name as fullname
+				FROM 
+				    roomres
+				INNER JOIN room on roomres.room_cd = room.room_cd
+				INNER JOIN emp on roomres.emp_no = emp.emp_no
+				inner join dept on emp.dept_cd = dept.dept_cd
+				<include refid="adminRoomDateSearch"/>
+				ORDER BY rr_date desc
+			) a
+		) b
+		<![CDATA[
+			where b.rnum >= #{startRow} and b.rnum <= #{endRow}
+			ORDER BY rr_date desc
+		]]>
+	</select>
+	
+	<select id="selectRoomModal" parameterType="string" resultType="roomVO">
+		SELECT
+		    room_cd
+		  , room_name
+		  , room_loc
+		FROM
+		    room
+		where room_cd = #{roomCd}
+	</select>
+
+	<select id="selectRentList" parameterType="String" resultType="roomVO">
+		SELECT
+		    rr_cd
+		  , room_cd
+		  , rr_date
+		  , rr_starttime
+		  , rr_endtime
+		  , rr_reason
+		  , emp_no
+		FROM
+		    roomres
+		where room_cd = #{roomCd} and substr(to_char(rr_date),0,10) = substr(to_char(sysdate),0,10)
+	</select>
+	
+	<delete id="myRoomRsvDel" parameterType="roomVO">
+		DELETE roomres
+		WHERE rr_cd = #{rrCd} 
+	</delete>
+	
+	<delete id="deleteRoomBlock" parameterType="roomVO" >
+		DELETE FROM roomres
+		WHERE
+		    	room_cd = #{roomCd}
+		    AND to_char(rr_date,'yy/MM/dd') = to_char(sysdate,'yy/MM/dd')
+		    AND emp_no = #{empNo}
+	</delete>
+	
+</mapper>

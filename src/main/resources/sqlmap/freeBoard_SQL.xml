@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.FreeMapper">
+
+	<select id="freeList" resultType="boardFreeVO">
+		SELECT to_number(FR_NO) as FR_NO, FR_TITLE, FR_CONTENT, FR_DATE, FR_HIT, FR_LIKE, FRWRITER_EMPNO, FR_ANONYSE
+		FROM FREE
+		ORDER BY FR_NO DESC
+	</select>
+
+	<select id="selectUserName" parameterType="String" resultType="String">
+		SELECT
+			EMP_NAME
+		FROM EMP
+		WHERE EMP_NO = #{empNo}
+	</select>
+	
+	<insert id="insertFree" parameterType="boardFreeVO" useGeneratedKeys="true">
+		<selectKey keyProperty="frNo" resultType="String" order="BEFORE">
+			select free_sequence.nextval from dual
+		</selectKey>
+		insert into free(
+			FR_NO, FR_TITLE, FR_CONTENT, FR_DATE, FR_HIT, FR_LIKE, FRWRITER_EMPNO, FR_ANONYSE
+		) values (
+			#{frNo}, #{frTitle}, #{frContent}, sysdate, 0, 0, #{frWriterEmpNo}, #{frAnonySe}
+		)
+	</insert>
+	
+	<select id="selectUserPhoto" parameterType="String" resultType="String">
+		SELECT emp_photo
+		from emp
+		where emp_no = #{empNo}
+	</select>
+	
+	<update id="incrementHit" parameterType="String">
+		UPDATE free
+		SET
+			FR_HIT = FR_HIT + 1
+		WHERE FR_NO = #{frNo}
+	</update>
+	
+	<select id="selectFree" parameterType="String" resultType="boardFreeVO">
+		SELECT
+	    	FR_NO, FR_TITLE, FR_CONTENT, FR_DATE, FR_HIT, FR_LIKE, FRWRITER_EMPNO, FR_ANONYSE
+	    FROM free
+	    WHERE FR_NO = #{frNo}
+	</select>
+	
+	<update id="updateFree" parameterType="boardFreeVO">
+		UPDATE free
+		SET 
+			FR_TITLE = #{frTitle},
+		    FR_CONTENT = #{frContent}
+		WHERE FR_NO = #{frNo}
+	</update>
+	
+	<delete id="deleteFree" parameterType="String">
+		DELETE FROM free
+		WHERE FR_NO = #{frNo}
+	</delete>
+	
+	<delete id="deleteFreeLike" parameterType="String">
+		DELETE FROM "LIKE"
+		WHERE FR_NO = #{frNo}
+	</delete>
+	
+	<delete id="deleteFreeComment" parameterType="String">
+		DELETE FROM "COMMENT"
+		WHERE CM_BOARDSE = #{cmBoardse} and CM_BNO = #{cmBno}
+	</delete>
+	
+	<insert id="likeInsert" parameterType="likeVO">
+		INSERT INTO "LIKE" (
+			LIKE_EMPNO, FR_NO
+		) values (
+			#{likeEmpno}, #{frNo}
+		)
+	</insert>
+	
+	<update id="likeUpCount" parameterType="String">
+		update free
+		set
+			FR_LIKE = FR_LIKE + 1
+		WHERE FR_NO = #{frNo}
+	</update>
+	
+	<delete id="removeLike" parameterType="likeVO">
+		DELETE FROM "LIKE"
+		WHERE FR_NO = #{frNo} and LIKE_EMPNO = #{likeEmpno}
+	</delete>
+	
+	<update id="likeDownCount" parameterType="String">
+		UPDATE FREE
+		SET
+			FR_LIKE = FR_LIKE - 1
+		WHERE FR_NO = #{frNo}
+	</update>
+	
+	<select id="selectFreeLike" parameterType="likeVO" resultType="int">
+		SELECT count(LIKE_EMPNO)
+		FROM "LIKE"
+		WHERE FR_NO = #{frNo} and like_empno = #{likeEmpno}
+	</select>
+	
+</mapper>

@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.MailMapper">
+	
+	<!-- 사용자의 전체 받은 메일을 날짜 내림차순으로 조회 -->
+	<select id="selectAllRmail" parameterType="string" resultType="rmailVO">
+		SELECT
+    		mail_no
+  			, mail_title
+  			, mail_content
+  			, mail_date
+  			, mailr_empno
+  			, mails_empno
+  			, mail_impse
+  			, mail_delse
+  			, mail_fileno
+  			, mail_chkse
+		FROM
+    		rmail
+    	WHERE 
+    		mailr_empNO = #{empNo}
+    		and mail_delse = '1'
+    	ORDER BY mail_date desc
+	</select>
+	
+	<!-- 코드값을 가지고 받은메일 상세 조회 -->
+	<select id="selectRmailOne" parameterType ="rmailVO" resultType="rmailVO">
+		SELECT
+    		mail_no
+  			, mail_title
+  			, mail_content
+  			, mail_date
+  			, mailr_empno
+  			, mails_empno
+  			, mail_impse
+  			, mail_delse
+  			, mail_fileno
+  			, mail_chkse
+		FROM
+    		rmail
+    	WHERE 
+    		MAIL_NO = #{mailNo}
+    		and mailr_empno = #{mailrEmpno}
+	</select>
+	
+	<!-- 메일 보내기 -->
+	<!-- 메일 보내기 -->
+	<!-- 메일 보내기 -->
+	<!-- 메일 보내시시 받은 데이터로 첨부파일 코드를 제외하고 나머지 인서트를하는 쿼리 -->
+	<!-- 첨부파일은 메일넘버가 정해진 후 업데이트가 가능해서 미리 나머지만 인서트. -->
+	<insert id="insertSmail" parameterType="sMailVO">
+		INSERT INTO smail (
+    		mail_no
+    		, mail_title
+    		, mail_content
+    		, mail_date
+    		, mails_empno
+		) VALUES (
+    		'mail' || LPAD(Mail_SEQ.NEXTVAL, 7, '0')
+  			, #{mailTitle}
+  			, #{mailContent}
+  			, sysdate
+  			, #{mailsEmpno}
+		)
+	</insert>
+	
+	<!-- empNo를 받아서 가장 빠른 데이터가져오기 -->
+	<select id="selectFastestOne" parameterType="sMailVO" resultType="sMailVO">
+		SELECT mail_no, mail_date
+		FROM (
+    		SELECT mail_no, mail_date
+    		FROM smail
+    		WHERE mails_empno = #{mailsEmpno}
+    		ORDER BY mail_date desc
+			)
+		WHERE ROWNUM = 1
+	</select>
+	
+	<select id="selectSmailOne" parameterType="smailVO" resultType="smailVO">
+		SELECT
+    		mail_no
+  			, mail_title
+  			, mail_content
+  			, mail_date
+  			, mails_empno
+  			, mail_fileno
+		FROM
+    		smail
+		where mails_empno = #{mailsEmpno}
+		      and mail_no = #{mailNo} 
+	</select>
+	
+	<!-- 위에서 받은 내용을 바탕으로 첨부파일 쿼리를 업데이트 시키는 쿼리 -->
+	<update id="updateSmailFile" parameterType="sMailVO">
+		UPDATE smail
+		SET
+    		mail_fileno = #{mailFileno}
+		WHERE
+	        mail_no = #{mailNo}
+	</update>
+	
+	<!-- 메일 보내기 -->
+	<!-- 메일 보내기 -->
+	<!-- 메일 보내기 -->
+	<insert id="insertRmail" parameterType="rmailVO">
+		INSERT INTO rmail (
+    		mail_no
+    		, mail_title
+    		, mail_content
+    		, mail_date
+    		, mailr_empno
+    		, mails_empno
+    		, mail_impse
+    		, mail_delse
+    		, mail_chkse
+    		, mail_fileno
+		) VALUES (
+    		#{mailNo}
+  			, #{mailTitle}
+  			, #{mailContent}
+  			, sysdate
+  			, #{mailrEmpno}
+  			, #{mailsEmpno}
+  			, #{mailImpse}
+  			, #{mailDelse}
+  			, #{mailChkse}
+  			, #{mailFileno}
+		)
+	</insert>
+	
+	<insert id="insertRecEmp" parameterType="mailRecVO">
+		INSERT INTO mailrec (
+    		mail_no
+    		, mailrec_empno
+		) VALUES (
+    		#{mailNo}
+  			, #{mailrecEmpno}
+		)
+	</insert>
+	
+	<insert id="insertRefEmp" parameterType="mailRecVO">
+		INSERT INTO mailref (
+    		mail_no
+    		, mailref_empno
+		) VALUES (
+    		#{mailNo}
+  			, #{mailrefEmpno}
+		)
+	</insert>
+	
+	<insert id="insertMailFile" parameterType="fileVO">
+		INSERT INTO "FILE" (
+    		file_no
+    		, file_sec
+    		, file_orgname
+    		, file_savename
+    		, file_savepath
+    		, file_size
+    		, file_mime
+    		, file_type
+		) VALUES (
+		    #{fileNo}
+		    , #{fileSec}
+  			, #{fileOrgname}
+  			, #{fileSavename}
+  			, #{fileSavepath}
+  			, #{fileSize}
+  			, #{fileMime}
+  			, #{fileType}
+		)
+	</insert>
+	
+	<select id="selectAllSmail" parameterType="smailVO" resultType="smailVO">
+		SELECT
+    		mail_no
+  			, mail_title
+  			, mail_content
+  			, mail_date
+  			, mails_empno
+  			, mail_fileno
+		FROM
+    		smail
+		WHERE mails_empno = #{empName}
+		ORDER BY mail_date desc
+	</select>
+	
+	<select id="selectAllRecEmp" parameterType="smailVO" resultType="mailRecVO">
+		SELECT
+    		mail_no
+  			, mailrec_empno
+		FROM
+    		mailrec
+		where mail_no = #{mailNo}
+	</select>
+	
+	<select id="selectAllRefEmp" parameterType="smailVO" resultType="mailRecVO">
+		SELECT
+    		mail_no
+  			, mailref_empno
+		FROM
+    		mailref
+		where mail_no = #{mailNo}
+	</select>
+	
+	<select id="selectAllMyselfMail" parameterType="rmailVO" resultType="rmailVO">
+		SELECT
+    		mail_no
+  			, mail_title
+  			, mail_content
+  			, mail_date
+  			, mailr_empno
+  			, mails_empno
+  			, mail_impse
+  			, mail_delse
+  			, mail_fileno
+  			, mail_chkse
+		FROM
+    		rmail
+		where mailr_empno = #{empNo} 
+			  and mails_empno = #{empNo}
+			  and mail_delse = '1'
+		order by mail_date desc
+	</select>
+	
+	<update id="mailLikeAjax" parameterType="rmailVO">
+		UPDATE rmail
+		SET
+    		MAIL_IMPSE = #{mailImpse}
+		WHERE
+		        mail_no = #{mailNo}
+    		AND mailr_empno = #{mailrEmpno}
+	</update>
+	
+	<!-- 중요메일함 리스트를 불러오는 쿼리 -->
+	<select id="selectAllImpRmail" parameterType="string" resultType="rmailVO">
+		SELECT
+    		mail_no
+  			, mail_title
+  			, mail_content
+  			, mail_date
+  			, mailr_empno
+  			, mails_empno
+  			, mail_impse
+  			, mail_delse
+  			, mail_fileno
+  			, mail_chkse
+		FROM
+    		rmail
+    	WHERE 
+    		mailr_empNO = #{empNo}
+    		and mail_impse = '2'
+    		and mail_delse = '1'
+    	ORDER BY mail_date desc
+	</select>
+	
+	<!-- 메일을 지워주는 (휴지통으로 보내는) 쿼리 -->
+	<update id="rmailDelete" parameterType="rmailVO">
+		UPDATE rmail
+		SET
+    		MAIL_delse = '2'
+		WHERE
+		    mail_no = #{mailNo}
+    		AND mailr_empno = #{mailrEmpno}
+	</update>
+	
+	<!-- 사용자의 전체 받은 메일을 날짜 내림차순으로 조회 -->
+	<select id="selectDeletedMail" parameterType="rmailVO" resultType="rmailVO">
+		SELECT
+    		mail_no
+  			, mail_title
+  			, mail_content
+  			, mail_date
+  			, mailr_empno
+  			, mails_empno
+  			, mail_impse
+  			, mail_delse
+  			, mail_fileno
+  			, mail_chkse
+		FROM
+    		rmail
+    	WHERE 
+    		mailr_empNO = #{mailrEmpno}
+    		and mail_delse = '2'
+    	ORDER BY mail_date desc
+	</select>
+	
+	<delete id="smailDelete" parameterType="smailVO">
+		DELETE FROM smail
+		WHERE
+	        mail_no = #{mailNo}
+		    AND mails_empno = #{mailsEmpno}
+	</delete>
+	
+	<delete id="deleteMailAll" parameterType="rmailVO">
+		DELETE FROM rmail
+		WHERE
+	        mail_no = #{mailNo}
+		    AND mailr_empno = #{mailrEmpno}
+	</delete>
+	
+	<!-- 휴지통에 보관중인 메일은 받은 메일함으로 복구하는 쿼리 -->
+	<update id="resMail" parameterType="rmailVO">
+		UPDATE rmail
+		SET
+    		MAIL_delse = '1'
+		WHERE
+		    mail_no = #{mailNo}
+    		AND mailr_empno = #{mailrEmpno}
+	</update>
+	
+	<!-- 메일 상태값 업데이트 -->
+	<update id="updateMailChkse" parameterType="string">
+		UPDATE rmail
+		SET
+    		MAIL_CHKSE = '2'
+		WHERE
+		    mail_no = #{mailNo}
+	</update>
+	
+	<!-- 메일 아이콘 클릭 시 읽음 여부 변경 -->
+	<update id="updateMailChkse2" parameterType="rmailVO">
+		UPDATE rmail
+		SET
+    		MAIL_CHKSE = #{mailChkse}
+		WHERE
+		    mail_no = #{mailNo} 
+		AND 
+			MAILR_EMPNO = #{mailrEmpno}
+	</update>
+	
+	<!-- 포틀릿용 안읽은 메일 -->
+	<select id="selectUnreadRmailList" parameterType="string" resultType="rmailVO">
+		SELECT
+		    mail_no
+		  , mail_title
+		  , mail_content
+		  , mail_date
+		  , mailr_empno
+		  , mails_empno
+		  , emp_name mailsEmpname
+		  , mail_impse
+		  , mail_delse
+		  , mail_fileno
+		  , mail_chkse
+		FROM
+		    rmail
+		    inner join emp on emp.emp_no = rmail.mails_empno
+		WHERE
+		    mailr_empno = #{empNo}
+		    and mail_chkse = '1'
+		    and mail_delse = '1'
+		ORDER BY
+		    mail_date desc
+	</select>
+	
+	<select id="selectUnreadRmailCnt" parameterType="string" resultType="int">
+		SELECT
+		    count(mail_no)
+		FROM
+		    rmail
+		WHERE
+		    mailr_empno = #{empNo}
+		    and mail_chkse = '1'
+		    and mail_delse = '1'
+		ORDER BY
+		    mail_date desc
+	</select>
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

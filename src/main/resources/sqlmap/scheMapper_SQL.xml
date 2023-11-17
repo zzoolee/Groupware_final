@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.ScheMapper">
+
+	<insert id="insertSche" parameterType="scheVO">
+		insert into SCHE(
+			SC_CD, SC_SE, SC_TITLE, SC_CONTENT, SC_STARTDATE, SC_ENDDATE, EMP_NO, DEPT_CD
+		)values(
+			(SELECT NVL(MAX(TO_NUMBER(SC_CD)),1000)+1 FROM SCHE), #{scSe}, #{scTitle}, #{scContent}, #{scStartdate}, #{scEnddate}, #{empNo}, #{deptCd}
+		)
+	</insert>
+	
+	<select id="selectSche" parameterType="scheVO" resultType="scheVO">
+		SELECT
+		    sc_cd
+		  , sc_se
+		  , sc_title
+		  , sc_content
+		  , sc_startdate
+		  , sc_enddate
+		  , emp_no
+		  , dept_cd
+		FROM
+		    sche
+		<trim prefix="where" prefixOverrides="and|or">
+			<if test="comSelect == true">
+				or (sc_se = 'A101')
+			</if>
+			<if test="deptSelect == true">
+				or (sc_se = 'A102' and dept_cd = #{deptCd, jdbcType=VARCHAR})
+			</if>
+			<if test="empSelect == true">
+				or (sc_se = 'A103' and emp_no = #{empNo})
+			</if>
+			<if test="comSelect == false and deptSelect == false and empSelect == false">
+				sc_se = 'A101' and sc_se = 'A102' and sc_se = 'A103'
+			</if>
+		</trim>
+	</select>
+	
+	<update id="updateSche" parameterType="scheVO">
+		UPDATE sche
+		SET
+		    sc_title = #{scTitle}
+		    , sc_content = #{scContent, jdbcType=VARCHAR}
+		    , sc_startdate = #{scStartdate}
+		    , sc_enddate = #{scEnddate}
+		WHERE
+		    sc_cd = #{scCd}
+	</update>
+	
+	<delete id="deleteSche" parameterType="string">
+		DELETE FROM sche
+		WHERE
+		    sc_cd = #{scCd}
+	</delete>
+	
+	<!-- 달력에서 이벤트로 실행 -->
+	<update id="updateScheDate" parameterType="scheVO">
+		UPDATE sche
+		SET
+		    sc_startdate = #{scStartdate}
+		    , sc_enddate = #{scEnddate}
+		WHERE
+		    sc_cd = #{scCd}
+	</update>
+
+</mapper>

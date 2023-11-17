@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- tiles dtd 검색 후 가져온다... -->
+<!DOCTYPE tiles-definitions PUBLIC "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN" "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+
+	<definition name="mainTemplate" template="/WEB-INF/views/mainTemplate.jsp">
+		<put-attribute name="header" value="/WEB-INF/views/tiles/header.jsp"/>
+		<put-attribute name="footer" value="/WEB-INF/views/tiles/footer.jsp"/>
+		<put-attribute name="nav" value="/WEB-INF/views/tiles/nav.jsp"/>
+		<put-attribute name="navAdmin" value="/WEB-INF/views/tiles/navAdmin.jsp"/>
+		<put-attribute name="chat" value="/WEB-INF/views/tiles/chat.jsp"/>
+	</definition>
+	
+	<definition name="main/*/*" extends="mainTemplate">
+		<put-attribute name="content" value="/WEB-INF/views/{1}/{2}.jsp"/>
+	</definition>
+	
+	<!--  관리자 메뉴 tiles 적용 -->
+	<definition name="main/*/*/*" extends="mainTemplate">
+		<put-attribute name="content" value="/WEB-INF/views/{1}/{2}/{3}.jsp"/>
+	</definition>
+	
+	
+	<definition name="loginTemplate" template="/WEB-INF/views/loginTemplate.jsp"/>
+	<definition name="conn/*" extends="loginTemplate">
+		<put-attribute name="content" value="/WEB-INF/views/login/{1}.jsp"/>
+	</definition>
+
+</tiles-definitions>

@@ -1,0 +1,890 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.AttendMapper">
+
+	
+	<!-- 근무상태 생성 -->
+	<!-- 계정 생성시 근무상태를 기본 '퇴근'으로 생성해주는 로직. -->
+	<insert id="insertAttendStatus" parameterType="AttendVO">
+		insert into atstatus (emp_no, at_status)
+		VALUES (#{empNo}, '자리비움')
+	</insert>
+	
+	<!-- 근태 생성 -->
+	<!-- 계정생성시 근태상태를 하나 설정해놓는 로직 -->
+	<insert id="insertDefaultAttend" parameterType="AttendVO">
+		insert into attend 
+			(at_date
+			, emp_no
+			, at_type
+			, at_week)
+		values (sysdate
+			, #{empNo}
+			, '기본'
+			, #{atWeek}
+		)
+	</insert>
+	
+	<!-- 근무상태셀렉트  -->
+	<!-- 가장 빠른 근태의 상태를 셀렉트하는 로직 -->
+	<!-- 내일날짜를 확인하여 인서트 or 업데이트로 나누어 로직을 수행하게한다 -->
+	<select id="selectMaxRecentAttend" resultType="int">
+		select MAX(to_char(at_date,'YYYYMMDD'))at_date from attend where emp_no = #{empNo}
+	</select>
+	
+	<!-- 근태생성(근무유형 루트) -->
+	<!-- 근무유형을 변경했을때 바뀐 근무유형으로 익일 근태 테이블을 미리 생성해주는 로직. -->
+	<insert id="insertStartAttendC" parameterType="AttendVO">
+		insert into attend (at_date, emp_no, at_type, at_week)
+		values (sysdate+1, #{empNo}, #{atType}, #{atWeek})
+	</insert>
+	
+	<!-- 근태수정(근무유형 루트) -->
+	<!-- 근무유형을 변경했을때 바뀐 근무유형으로 익일 근태테이블을 미리 수정해주는 로직 -->
+	<update id="updateStartAttendC" parameterType="AttendVO">
+		update attend
+		set at_type= #{atType}
+			where emp_no = #{empNo}
+		and TO_DATE(at_date, 'YY/MM/DD') = TO_DATE(#{atDate, javaType=java.sql.Date, jdbcType=DATE}, 'YY/MM/DD')
+	</update>
+	
+	
+	<!-- 출근/퇴근 -->
+	<!-- 출근/퇴근 -->
+	
+	<!-- 오늘의 주차를 가져오는 셀렉트문 -->
+	<select id="selectTodayWeek" resultType="int">
+		SELECT TO_CHAR(SYSDATE,'W') AS YEAR_WEEK FROM DUAL
+	</select>
+	
+	<!-- 출근당일 출근 데이터가 있는지를 확인하는 카운팅 로직 -->
+	<select id="selectTodayAttendCount" parameterType="AttendVO" resultType="int">
+		select count(*)cnt
+  		from attend 
+  		where emp_no = #{empNo}
+  		and to_char(at_date, 'YYYYMMDD') = to_char(SYSDATE, 'YYYYMMDD')
+	</select>
+	
+	<!-- 최근 근무를 가져오는 로직 -->
+	<select id="selectRecentAttend" parameterType="AttendVO" resultType="AttendVO">
+		select at_date, emp_no, at_start, at_end, at_overtime, at_type, at_result, at_week
+		from attend
+		where emp_no = #{empNo}
+  		and at_date = (select MAX(at_date) from attend where emp_no = #{empNo})
+	</select>
+	
+	<!-- 금일 근무 셀렉트 -->
+	<!-- 회원의 오늘 근무시간을 알아줄 로직 -->
+	<!-- 출퇴근에 뿌려줄 예정 -->
+	<select id="selectTodayAttend" parameterType="AttendVO" resultType="AttendVO">
+		select at_date, emp_no, at_start, at_end, at_overtime, at_type, at_result, at_week
+		from attend
+		where emp_no = #{empNo}
+  		and at_date = (select at_date from attend where emp_no = #{empNo} and (to_char(at_date,'YYYYMMDD')) = (to_char(sysdate,'YYYYMMDD')))
+	</select>
+	
+	<!-- 근태생성(정상루트) -->
+	<!-- 출근을 찍었을 때 근태테이블을 추가해주는 로직. -->
+	<insert id="insertStartAttend" parameterType="AttendVO">
+		insert into attend (at_date, emp_no, at_start, at_type, at_result, at_week)
+		values (sysdate, #{empNo}, sysdate, #{atType}, '정상근무', #{atWeek})
+	</insert>
+	
+	<!-- 근태출근수정(근무유형 루트) -->
+	<!-- 근무유형 변경으로 근태테이블이 미리 생성되었을 때 인서트대신 수행할 업데이트 로직. -->
+	<update id="updateStartAttend" parameterType="AttendVO">
+		update attend
+		set at_date = sysdate,
+			at_start = sysdate,
+			at_result = #{atResult},
+			at_week = #{atWeek}
+		where emp_no = #{empNo}
+  		and at_date = (select MAX(at_date) from attend where emp_no = #{empNo})
+	</update>
+	
+	<!-- 근태퇴근수정(정상루트) -->
+	<!-- 퇴근시 오늘의 근태를 업데이트 시킬 로직. -->
+	<update id="updateEndAttend" parameterType="AttendVO">
+		update attend
+		set at_end = sysdate,
+			at_overtime = #{atOvertime},
+<!--             at_overtime = sysdate - AT_START - 560, -->
+			at_result = #{atResult},
+			at_week = #{atWeek}
+		where emp_no = #{empNo}
+		and to_char(at_date, 'YYYYMMDD') = to_char(sysdate, 'YYYYMMDD')
+	</update>
+	
+	<!-- 최근 근무를 가져오는 로직 -->
+	<select id="selectThisWeekAttend" parameterType="AttendVO" resultType="AttendVO">
+		select at_date, emp_no, at_start, at_end, at_overtime, at_type, at_result, at_week
+		from attend
+		where emp_no = #{empNo}
+		and to_char(at_date,'YYYYMM') = to_char(sysdate,'YYYYMM')
+  		and at_week = #{atWeek}
+	</select>
+	
+	<select id="selectMonthExist" parameterType="AttendVO" resultType="AttendVO">
+		SELECT to_char(at_Date, 'YYYY-MM') AS yearMonth
+		FROM ATTEND
+		where emp_no = #{empNo}
+		GROUP BY to_char(at_Date, 'YYYY-MM')
+		ORDER BY yearMonth desc
+	</select>
+	
+	<!-- 월별 전체근무를 가져다주는 sql문 -->
+	<select id="selectMonthAttend" parameterType="AttendVO" resultType="AttendVO">
+		select *
+		from attend	
+		where to_char(at_date, 'YYYY-MM') = #{yearMonth}
+		and emp_no = #{empNo}
+		<![CDATA[
+		and at_date < to_char(sysdate,'yy/MM/dd')
+		]]>
+		order by at_date
+	</select>
+	
+	<!-- 월별 주차를 가져다주는 sql문 -->
+	<select id="selectWeek" parameterType="AttendVO" resultType="AttendVO">
+		select at_week
+		from attend	
+		where to_char(at_date, 'YYYY-MM') = #{yearMonth}
+		and emp_no = #{empNo}
+		group by at_week
+		order by at_week
+	</select>
+	
+	<!-- 주간 전체근무를 가져다주는 SQL문 -->
+	<select id="selectWeekAttend" parameterType="AttendVO" resultType="AttendVO">
+		select *
+		from attend
+		where to_char(at_date, 'YYYY-MM') = #{yearMonth}
+		and emp_no = #{empNo}
+		<![CDATA[
+		and at_date < to_char(sysdate,'yy/MM/dd')
+		]]>
+		<if test="atWeek != 0">
+			and at_week = #{atWeek}
+		</if>
+	</select>
+	
+	<update id="updateAttendStatus" parameterType="AtStatusVO">
+		update atstatus
+		set at_status = #{atStatus}
+		where emp_no = #{empNo}
+	</update>
+	
+	<select id="selectAttendStatus" parameterType="AtStatusVO" resultType="AtStatusVO">
+		select *
+		from atstatus
+		where emp_no = #{empNo}
+	</select>
+	
+	
+	<!-- 근무퍼센트롤 가져와주는 쿼리 -->
+	<select id="selectAttendPercent" resultType="AttendVO">
+		select (to_char(sysdate, 'HH24')-to_char(at_start, 'HH24')) diff_hour
+				, (to_char(sysdate, 'MI')-to_char(at_start, 'MI')) diff_minute
+		from attend
+		where emp_no = #{empNo}
+			  and to_char(at_date, 'YYYYMMDD')=to_char(sysdate, 'YYYYMMDD')
+	</select>
+	
+	<!-- 근태 - 관리자 -->
+	<select id="selectAttendStats" parameterType="AttendVO" resultType="AttendVO">
+		SELECT
+		    emp.emp_no, emp_name, dept_name, cd_name, sum_overtime, sum_resultlate, sum_resultoff, at_type
+		FROM emp
+		    inner join dept on emp.dept_cd = dept.dept_cd
+		    inner join code on emp.emp_rank = code.cd_cd
+		    left outer join
+		    (
+		        SELECT
+		            emp_no
+		          , sum(at_overtime) sum_overtime
+		          , COUNT(CASE WHEN at_result = '지각' THEN 1 END) sum_resultlate
+		          , COUNT(CASE WHEN at_result = '조퇴' THEN 1 END) sum_resultoff
+		        FROM
+		            attend
+		    <if test='atDate != null'>
+		        where to_char(at_date,'yy/mm') = to_char(#{atDate},'yy/mm')
+		    </if>
+		    <if test='atDate == null'>
+		    	where to_char(at_date,'yy/mm') = to_char(sysdate,'yy/mm')
+		    </if>
+		        group by emp_no
+		    ) at on emp.emp_no = at.emp_no
+		    left outer join
+		    (
+		        SELECT 
+		            emp_no, 
+		            at_type
+		        FROM 
+		            attend
+		        WHERE 
+		            (emp_no, at_date) IN 
+		                (SELECT 
+		                    emp_no, MAX(at_date) 
+		                FROM 
+		                    attend 
+		                GROUP BY
+		                    emp_no
+		                )
+		    ) type on emp.emp_no = type.emp_no
+		order by dept.dept_name asc, emp.emp_rank desc, emp.emp_hire asc
+	</select>
+	
+	<!-- 이번년도 모든 연차를 부서와 입사연도 정렬로 리턴해주는 쿼리 -->
+	<select id="selectAllAyannList" resultType="ayannVO">
+		SELECT
+    		emp_name
+    		, cd_name
+    		, dt.dept_name
+    		, ep.emp_no
+    		, ep.dept_cd
+    		, emp_rank
+    		, emp_hire
+    		, ayann_cnt
+    		, ayann_rest
+		FROM
+    		emp ep, dept dt, code cd, ayann ay
+		where ep.emp_rank = cd.cd_cd and ep.dept_Cd = dt.dept_cd and ep.emp_no = ay.emp_no and to_char(ayann_dt, 'YYYY') = to_char(sysdate, 'YYYY')
+		order by dept_name asc, emp_rank desc, emp_hire asc
+	</select>
+	
+	<!-- 연차가 발생했던 모든 연도를 리턴해주는 쿼리 -->
+	<select id="selectAyannYearList" parameterType="AyannVO" resultType="AyannVO">
+		select to_char(ayann_dt, 'YYYY') ayann_dt, ayann_cnt, ayann_rest
+		from ayann
+		where emp_no = #{empNo}
+		order by ayann_dt
+	</select>
+	
+	<!-- 올해 연차의 총량, 남은량을 반환해주는 쿼리 -->
+	<select id="selectThisYearAyann" parameterType="AyannVO" resultType="AyannVO">
+		select to_char(ayann_dt, 'YYYY') AYANN_DT, ayann_cnt, ayann_rest
+		from ayann
+		where emp_no = #{empNo} and to_char(ayann_dt, 'YYYY') = to_char(sysdate, 'YYYY')
+	</select>
+	
+	<!-- 해당 연도의 연차의 총량, 남은량을 반환해주는 쿼리 -->
+	<select id="selectYearAyann" parameterType="AyannVO" resultType="AyannVO">
+		select to_char(ayann_dt, 'YYYY') AYANN_DT, ayann_cnt, ayann_rest
+		from ayann
+		where emp_no = #{empNo} and to_char(ayann_dt, 'YYYY') = #{ayannDt}
+	</select>
+	
+	<!-- 해당 연도의 연차사용 내역을 반환해주는 쿼리 -->
+	<select id="selectYearUsedAyann" parameterType="ayannUsedVO" resultType="ayannUsedVO">
+		SELECT
+    		ayann_usedcd
+  			, to_char(ayann_startdate, 'YYYY-MM-DD') ayann_startdate
+  			, ayann_enddate
+  			, ayann_usedamt
+  			, to_char(ayann_dt, 'YYYY') AYANN_DT
+  			, emp_no
+		FROM
+    		ayannused
+		where to_char(ayann_dt,'YYYY') = #{ayannDt}
+		        AND EMP_NO = #{empNo}
+	</select>
+	
+	<select id="selectDeptList" resultType="deptVO">
+		SELECT
+    		dept_cd
+  			, dept_name
+  			, dept_headempno
+  			, dept_parent
+  			, dept_icon
+		FROM
+    		dept
+    	order by dept_cd asc
+	</select>
+	
+	<select id="adminAyannAjax" parameterType="String" resultType="ayannVO">
+		SELECT
+    		emp_name
+    		, cd_name
+    		, dt.dept_name
+    		, ep.emp_no
+    		, ep.dept_cd
+    		, emp_rank
+    		, emp_hire
+    		, ayann_cnt
+    		, ayann_rest
+		FROM
+    		emp ep, dept dt, code cd, ayann ay
+		where ep.emp_rank = cd.cd_cd and ep.dept_Cd = dt.dept_cd and ep.emp_no = ay.emp_no and ep.dept_cd = #{deptCd} and to_char(ayann_dt, 'YYYY') = to_char(sysdate, 'YYYY')
+		order by emp_rank desc, emp_hire asc
+	</select>
+	
+	<select id="adminAyannAjaxAll" resultType="ayannVO">
+		SELECT
+    		emp_name
+    		, cd_name
+    		, dt.dept_name
+    		, ep.emp_no
+    		, ep.dept_cd
+    		, emp_rank
+    		, emp_hire
+    		, ayann_cnt
+    		, ayann_rest
+		FROM
+    		emp ep, dept dt, code cd, ayann ay
+		where ep.emp_rank = cd.cd_cd and ep.dept_Cd = dt.dept_cd and ep.emp_no = ay.emp_no and to_char(ayann_dt, 'YYYY') = to_char(sysdate, 'YYYY')
+		order by emp_rank desc, emp_hire asc
+	</select>
+	
+	<select id="selectAllEmpList" resultType="empVO">
+		SELECT
+    		emp_no
+  			, emp_name
+  			, dept_cd
+  			, emp_rank
+  			, emp_level
+  			, emp_hp
+  			, emp_email
+  			, emp_hire
+  			, emp_workse
+  			, emp_loginse
+  			, enabled
+  			, noti_list
+		FROM
+    		emp
+		where emp_workse = 1
+	</select>
+	
+	<insert id="insertAyann" parameterType="ayannVO">
+		INSERT INTO ayann (
+    		ayann_dt
+    		, emp_no
+    		, ayann_cnt
+    		, ayann_rest
+		) VALUES (
+   			sysdate
+  			, #{empNo}
+  			, #{ayannCnt}
+  			, #{ayannRest}
+		)
+	</insert>
+	
+	<insert id="insertNewEmpAyann" parameterType="ayannVO">
+		INSERT INTO ayann (
+    		ayann_dt
+    		, emp_no
+    		, ayann_cnt
+    		, ayann_rest
+		) VALUES (
+   			sysdate
+  			, #{empNo}
+  			, #{ayannCnt}
+  			, #{ayannRest}
+		)
+	</insert>
+	
+	<update id="ayannUpdate" parameterType="ayannVO">
+		UPDATE ayann
+		SET
+    		ayann_cnt = #{ayannCnt},
+    		ayann_rest = #{ayannRest}
+		WHERE
+		    to_char(ayann_dt,'YYYY') =  to_char(sysdate, 'YYYY')
+   		AND emp_no = #{empNo}
+	</update>
+	
+	
+	<select id="selectAttendYearExist" parameterType="attendVO" resultType="attendVO">
+		SELECT
+    		to_date(to_char(at_date, 'YYYY'),'YYYY') at_date
+		FROM
+    		attend
+		where emp_no = #{empNo}
+		group by to_char(at_date, 'YYYY')
+		order by at_date desc
+	</select>
+	
+	<select id="selectAttendYearExistAll" parameterType="attendVO" resultType="attendVO">
+		SELECT
+    		to_date(to_char(at_date, 'YYYY-mm'),'YYYY-mm') at_date
+		FROM
+    		attend
+		group by to_char(at_date, 'YYYY-mm')
+		order by at_date desc
+	</select>
+	
+	<!-- 내정보로 반환 될 올해 연차의 총량, 남은량을 반환해주는 쿼리 -->
+	<select id="selectThisYearAyannMyinfo" parameterType="string" resultType="AyannVO">
+		select to_char(ayann_dt, 'YYYY') AYANN_DT, ayann_cnt, ayann_rest
+		from ayann
+		where emp_no = #{empNo} and to_char(ayann_dt, 'YYYY') = to_char(sysdate, 'YYYY')
+	</select>
+	
+	<select id="selectAttendYearForChart" parameterType="attendVO" resultType="attendVO">
+		SELECT
+    		to_date(to_char(at_date, 'YYYY'),'YYYY') at_date
+		FROM
+    		attend
+		group by to_char(at_date, 'YYYY')
+		order by at_date desc
+	</select>
+	
+	<select id="selectEmpCountForChart" resultType="int">
+		select count(*)
+		from emp
+	</select>
+	
+	<select id="selectEmpWorkCountForChart" resultType="int">
+		select count(*)
+		from attend
+		where to_char(at_date, 'YYYYMMDD') = to_char(sysdate, 'YYYYMMDD')
+	</select>
+	
+	<select id="selectAttendCountForChart" parameterType="String" resultType="int">
+		select count(*)
+		from attend
+		where to_char(at_date, 'YYYYMMDD') = to_char(sysdate, 'YYYYMMDD') 
+				and at_type = #{atType}
+	</select>
+	
+	<select id="selectOvertimeCountForChart" parameterType="attendVO" resultType="attendVO">
+		SELECT
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-01' 
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+   	 		and dept.dept_cd = emp.dept_cd
+    		</if>
+    		), 0) AS jan,
+		    
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend 
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-02'
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+    		and dept.dept_cd = emp.dept_cd
+    		</if>
+    		), 0) AS feb,
+		    
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-03'
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+    		and dept.dept_cd = emp.dept_cd
+    		</if>
+    		),0) AS mar,
+		    
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-04'
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+    		and dept.dept_cd = emp.dept_cd
+    		</if>
+    		),0) AS apr,
+		    
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-05'
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+    		and dept.dept_cd = emp.dept_cd
+    		</if>
+    		),0) AS may,
+			
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-06'
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+    		and dept.dept_cd = emp.dept_cd
+    		</if>
+    		), 0) AS jun,
+		       
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-07'
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+    		and dept.dept_cd = emp.dept_cd
+    		</if>
+    		), 0) AS jul,
+		    
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-08'
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+    		and dept.dept_cd = emp.dept_cd
+    		</if>
+    		), 0) AS aug,
+		    
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-09'
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+    		and dept.dept_cd = emp.dept_cd
+    		</if>
+    		), 0) AS sep,
+		    
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-10'
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+		    and dept.dept_cd = emp.dept_cd	
+    		</if>
+    		), 0) AS oct,
+		    
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-11'
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+    		and dept.dept_cd = emp.dept_cd
+    		</if>
+    		), 0) AS nov,
+		    
+    		NVL((SELECT sum(at_overtime) at_overtime
+    		from attend
+    		<if test="deptName != '전체'">
+    		, dept, emp
+    		</if>
+    		where to_char(at_date, 'YYYY-MM') = #{atDateString}||'-12'
+    		<if test="deptName != '전체'">
+    		and dept_name = #{deptName}
+    		and emp.emp_no = attend.emp_no
+    		and dept.dept_cd = emp.dept_cd
+    		</if>
+    		), 0) AS dec
+		from dual
+	</select>
+	
+	<select id="selectAyannCountForChart" parameterType="attendVO" resultType="attendVO">
+		SELECT
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-01'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS jan,
+	
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-02'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS feb,
+	
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-03'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS mar,
+	
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-04'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS apr,
+	
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-05'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS may,
+	
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-06'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS jun,
+	
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-07'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS jul,
+	
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-08'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS aug,
+	
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-09'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS sep,
+	
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-10'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS oct,
+	
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-11'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS nov,
+	
+		NVL((SELECT count(*)
+		FROM ayannused
+		<if test="deptName != '전체'">
+			, dept, emp
+		</if>
+		WHERE to_char(ayann_startdate, 'YYYY-MM') = #{atDateString}||'-12'
+		<if test="deptName != '전체'">
+			AND emp.emp_no = ayannused.emp_no
+			AND dept.dept_cd = emp.dept_cd
+			AND dept_name = #{deptName}
+		</if>
+		), 0) AS dec
+		FROM dual
+	</select>
+	
+	<select id="selectTaskStartForChart" resultType="attendVO">
+		SELECT
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-01'), 0) AS jan,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-02'), 0) AS feb,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-03'),0) AS mar,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-04'),0) AS apr,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-05'),0) AS may,
+		
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-06'), 0) AS jun,
+		       
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-07'), 0) AS jul,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-08'), 0) AS aug,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-09'), 0) AS sep,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-10'), 0) AS oct,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-11'), 0) AS nov,
+		    
+    		NVL((select count(*)
+    			from task
+	    		where to_char(task_startdate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-01'),12) AS dec
+		from dual
+	</select> 
+	
+	<select id="selectTaskEndForChart" resultType="attendVO">
+		SELECT
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-01'), 0) AS jan,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-02'), 0) AS feb,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-03'),0) AS mar,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-04'),0) AS apr,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-05'),0) AS may,
+		
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-06'), 0) AS jun,
+		       
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-07'), 0) AS jul,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-08'), 0) AS aug,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-09'), 0) AS sep,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-10'), 0) AS oct,
+		    
+    		NVL((select count(*)
+        		from task
+        		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-11'), 0) AS nov,
+		    
+    		NVL((select count(*)
+    			from task
+	    		where to_char(task_enddate, 'YYYY-MM') = to_char(sysdate, 'YYYY')||'-12'), 0) AS dec
+		from dual
+	</select> 
+
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

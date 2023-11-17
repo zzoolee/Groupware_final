@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.PortletMapper">
+
+	<delete id="deletePortlet" parameterType="string">
+		delete from portlet
+		where emp_no = #{empNo}
+	</delete>
+	
+	<insert id="insertPortlet" parameterType="portletVO">
+		insert into portlet(
+			PORT_CATECODE, EMP_NO, PORT_USESE, PORT_XCOORD, PORT_YCOORD, PORT_WIDTH, PORT_HEIGHT
+		)values(
+			#{portCatecode}, #{empNo}, #{portUsese}, #{portXcoord}, #{portYcoord}, #{portWidth}, #{portHeight}
+		)
+	</insert>
+	
+	<select id="selectPortletList" parameterType="string" resultType="portletVO">
+		select 
+			port_catecode, emp_no, port_usese, port_xcoord, port_ycoord, port_width, port_height
+		from portlet
+		where emp_no = #{empNo}
+	</select>
+
+</mapper>

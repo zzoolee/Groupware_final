@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.FreeseatMapper">
+
+	<select id="selectReservedSeat" parameterType="seatResVO" resultType="seatResVO">
+		SELECT
+		    sr_cd
+		  , off_cd
+		  , sr_no
+		  , sr_date
+		  , emp_no
+		FROM
+		    seatres
+		WHERE
+		    to_char(sr_date,'yyyy-MM-dd') = to_char(#{srDate},'yyyy-MM-dd')
+		    and emp_no != 'admin'
+	</select>
+	
+	<select id="selectBlockedSeat" parameterType="seatResVO" resultType="seatResVO">
+		SELECT
+		    sr_cd
+		  , off_cd
+		  , sr_no
+		  , sr_date
+		  , emp_no
+		FROM
+		    seatres
+		WHERE
+		    to_char(sr_date,'yyyy-MM-dd') = to_char(#{srDate},'yyyy-MM-dd')
+		    and emp_no = 'admin'
+	</select>
+	
+	<select id="chkMyFreeseat" parameterType="string" resultType="seatResVO">
+		SELECT
+		    sr_cd
+		  , off_cd
+		  , sr_no
+		  , sr_date
+		  , emp_no
+		FROM
+		    seatres
+		WHERE
+		    to_char(sr_date,'yyyy-MM-dd') = to_char(sysdate,'yyyy-MM-dd')
+		    and emp_no = #{empNo}
+	</select>
+	
+	<select id="chkNowFreeseat" parameterType="seatResVO" resultType="seatResVO">
+		SELECT
+		    sr_cd
+		  , off_cd
+		  , sr_no
+		  , sr_date
+		  , emp_no
+		FROM
+		    seatres
+		WHERE
+		    to_char(sr_date,'yyyy-MM-dd') = to_char(sysdate,'yyyy-MM-dd')
+		    and off_cd = #{offCd}
+		    and sr_no = #{srNo}
+	</select>
+	
+	<insert id="insertRsvFreeseat" parameterType="seatResVO">
+		INSERT INTO seatres (
+		    sr_cd
+		    , off_cd
+		    , sr_no
+		    , sr_date
+		    , emp_no
+		) VALUES (
+		    (SELECT NVL(MAX(TO_NUMBER(sr_cd)),1000)+1 FROM seatres)
+		  , #{offCd}
+		  , #{srNo}
+		<if test="srDate == null"> <!-- 사용자 경우 -->
+		  , sysdate
+		</if>
+		<if test="srDate != null"> <!-- 관리자 경우 -->
+		  , #{srDate}
+		</if>
+		  , #{empNo}
+		)
+	</insert>
+	
+	<select id="myFreeseatRsvList" parameterType="string" resultType="seatResVO">
+		SELECT
+		    sr_cd
+		  , seatres.off_cd
+		  , off_loc
+		  , sr_no
+		  , sr_date
+		  , emp_no
+		FROM
+		    seatres
+		    inner join office on seatres.off_cd = office.off_cd
+		WHERE
+		    emp_no = #{empNo}
+		ORDER BY sr_date desc
+	</select>
+	
+	<delete id="deleteRsvFreeseat" parameterType="string">
+		DELETE FROM seatres
+		WHERE
+        	sr_cd = #{srCd}
+	</delete>
+	
+	<!-- 일자별 검색 -->
+	<select id="selectDateRsvFreeSeat" parameterType="seatResVO" resultType="seatResVO">
+		SELECT
+		    sr_cd
+		  , seatres.off_cd
+		  , off_loc
+		  , sr_no
+		  , sr_date
+		  , seatres.emp_no
+		  , emp_name||'('||seatres.emp_no||')/'||dept_name as fullname
+		FROM
+		    seatres
+		    inner join office on seatres.off_cd = office.off_cd
+		    inner join emp on seatres.emp_no = emp.emp_no
+		    inner join dept on emp.dept_cd = dept.dept_cd
+		<trim prefix="where" prefixOverrides="and|or">
+		    <if test="empNo != 'admin'"> <!-- 관리자가 아닌 경우 본인 것만 조회 -->
+			    and seatres.emp_no = #{empNo}
+			</if>
+			<if test="empNo == 'admin'"> <!-- 관리자의 경우 관리자 제외 나머지 조회 -->
+			    and seatres.emp_no != 'admin'
+			</if>
+		    <if test="srDate != null"> <!-- 날짜 데이터 없는 경우 전체 조회 -->
+			    and to_char(sr_date,'yyyy-MM-dd') = to_char(#{srDate},'yyyy-MM-dd')
+		    </if>
+	    </trim>
+		ORDER BY sr_date desc
+	</select>
+	
+	<!-- 관리자 -->
+	<delete id="deleteAllblockseat" parameterType="seatResVO">
+		DELETE FROM seatres
+		WHERE
+		    to_char(sr_date,'yyyy-MM-dd') = to_char(#{srDate},'yyyy-MM-dd')
+		    AND emp_no = #{empNo}
+	</delete>
+	
+	<select id="allFreeseatRsvList" resultType="seatResVO">
+		SELECT
+		    sr_cd
+		  , seatres.off_cd
+		  , off_loc
+		  , sr_no
+		  , sr_date
+		  , emp_name||'('||seatres.emp_no||')/'||dept_name as fullname
+		FROM
+		    seatres
+		    inner join office on seatres.off_cd = office.off_cd
+		    inner join emp on seatres.emp_no = emp.emp_no
+		    inner join dept on emp.dept_cd = dept.dept_cd
+		WHERE seatres.emp_no != 'admin' <!-- inner join해서 dept 없는 admin은 안나옴... -->
+		ORDER BY sr_date desc
+	</select>
+	
+	
+</mapper>

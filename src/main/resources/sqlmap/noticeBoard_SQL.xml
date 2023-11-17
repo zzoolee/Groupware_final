@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.NoticeMapper">
+
+	<resultMap type="boardNoticeVO" id="noticeMap">
+		<id property="noNo" column="no_no"/>
+		<result property="noNo" column="no_no"/> 
+		<result property="noTitle" column="no_title"/> 
+		<result property="noContent" column="no_content"/> 
+		<result property="noDate" column="no_date"/> 
+		<result property="noHit" column="no_hit"/> 
+		<result property="nowRiterEmpNo" column="nowriter_empno"/> 
+		<collection property="noticeFileList" resultMap= "boardFileMap"/>
+	</resultMap>
+	
+	<resultMap type="fileVO" id="fileMap">
+		<id property="fileCd" column="file_no"/>
+		<result property="fileCd" column="file_no"/>
+		<result property="fileSec" column="file_sec"/>
+		<result property="fileOrgname" column="file_orgname"/>
+		<result property="fileSavename" column="file_savename"/>
+		<result property="fileSavepath" column="file_savepath"/>
+		<result property="fileSize" column="file_size"/>
+		<result property="fileMime" column="file_mime"/>
+		<result property="fileType" column="file_no"/>
+	</resultMap>
+	
+	<select id="noticeList" resultType="boardNoticeVO">
+		SELECT to_number(NO_NO)as no_no, NO_TITLE, NO_CONTENT, NO_DATE, NO_HIT, NOWRITER_EMPNO, NO_FIX
+		FROM NOTICE
+		order by no_fix, no_no DESC
+	</select>
+	
+	<select id="noticePortletList" resultType="boardNoticeVO">
+		SELECT to_number(NO_NO)as no_no, NO_TITLE, NO_CONTENT, NO_DATE, NO_HIT, NOWRITER_EMPNO, NO_FIX
+		FROM NOTICE
+		order by no_no DESC
+	</select>
+	
+	<insert id="insertNotice" parameterType="boardNoticeVO" useGeneratedKeys="true">
+		<selectKey keyProperty="noNo" resultType="String" order="BEFORE">
+			select NOTICE_SEQUENCE.nextval from dual
+		</selectKey>
+		insert into notice(
+			NO_NO, NO_TITLE, NO_CONTENT, NO_DATE, NO_HIT, NOWRITER_EMPNO, NO_FIX
+		) VALUES (
+			#{noNo}, #{noTitle}, #{noContent}, sysdate, 0, #{noWriterEmpNo}, #{noFix,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<select id="selectNotice" parameterType="String" resultType="boardNoticeVO">
+		SELECT
+	    	NO_NO, NO_TITLE, NO_CONTENT, NO_DATE, NO_HIT, NOWRITER_EMPNO, NO_FIX
+	    FROM NOTICE
+	    WHERE NO_NO = #{noNo}
+	</select>
+	
+	<update id="incrementHit" parameterType="String">
+		UPDATE NOTICE
+		SET
+			NO_HIT = NO_HIT + 1
+		WHERE NO_NO = #{noNo}
+	</update>
+	
+	<select id="selectUserName" parameterType="String" resultType="String">
+		SELECT
+			EMP_NAME
+		FROM EMP
+		WHERE EMP_NO = #{empNo}
+	</select>
+	
+	<update id="updateNotice" parameterType="boardNoticeVO">
+		UPDATE NOTICE
+		SET 
+			NO_TITLE = #{noTitle},
+		    NO_CONTENT = #{noContent},
+		    NO_FIX = #{noFix, jdbcType=VARCHAR}
+		WHERE NO_NO = #{noNo}
+	</update>
+	
+	<delete id="deleteNotice" parameterType="String">
+		DELETE FROM NOTICE
+		WHERE NO_NO = #{noNo}
+	</delete>
+	
+<!-- 	<select id="noticeDownload" parameterType="String"> -->
+<!-- 		SELECT "FILE" -->
+<!-- 			FILE_NO, FILE_SEC, FILE_ORGNAME, FILE_SAVENAME, FILE_SAVEPATH, FILE_SIZE, FILE_MIME, FILE_TYPE -->
+<!-- 		FROM "FILE" -->
+<!-- 		WHERE FILE_NO = #{fileNo} -->
+<!-- 	</select> -->
+	
+</mapper>

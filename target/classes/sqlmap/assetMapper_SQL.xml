@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.AssetMapper">
+
+	<sql id="assetDateSearch">
+		<if test="selectedAssetDate != null">
+			and substr(to_char(ASR_DATE, 'yyyy-MM-dd HH:mm:ss'), 0, 10) = #{selectedAssetDate}
+		</if>
+	</sql>
+	<sql id="assetAdminDateSearch">
+		<if test="selectedAssetDate != null">
+			WHERE substr(to_char(ASR_DATE, 'yyyy-MM-dd HH:mm:ss'), 0, 10) = #{selectedAssetDate}
+		</if>
+	</sql>
+
+	<select id="selectMyAssetCount" parameterType="asspagingVO" resultType="int">
+		SELECT
+			COUNT(asr_cd)
+		FROM
+			asrent
+		WHERE
+			emp_no = #{empNo}
+			<include refid="assetDateSearch"/>
+	</select>
+
+	<select id="selectAdminAssetCount" parameterType="asspagingVO" resultType="int">
+		SELECT
+			COUNT(asrent.asr_cd)
+		FROM
+			asrent
+		INNER JOIN asset on asrent.as_cd = asset.as_cd
+			<include refid="assetAdminDateSearch"/>
+	</select>
+
+	<select id="selectAssList" parameterType="assVO" resultType="assVO">
+		SELECT as_cd, as_se, as_name, as_loc FROM asset
+	</select>
+	
+	<select id="selectAsRentTodayList" parameterType="assVO" resultType="assVO">
+		SELECT 
+			asr_cd, as_cd, asr_date, asr_starttime, asr_endtime, asr_reason, emp_no
+		FROM asrent
+		WHERE asr_date BETWEE TO_DATE(sysdate, 'YYYY-MM-DD') AND TO_DATE(sysdate, 'YYYY-MM-DD') + 1;
+	</select>
+	
+	<select id="selectAssetInfo" parameterType="string" resultType="assVO">
+		SELECT
+		    as_cd
+		  , as_se
+		  , as_name
+		  , as_loc
+		FROM
+		    asset
+		WHERE
+			as_cd = #{asCd}
+	</select>
+	
+	<insert id="insertAsRent" parameterType="assVO">
+		INSERT INTO ASRENT (
+			ASR_CD, AS_CD, ASR_DATE, ASR_STARTTIME, ASR_ENDTIME, ASR_REASON, EMP_NO
+		) VALUES (
+			(SELECT NVL(MAX(TO_NUMBER(ASR_CD)), 0) + 1 FROM ASRENT), #{asCd}, sysdate, #{asrStarttime}, #{asrEndtime}, #{asrReason, jdbcType=VARCHAR}, #{empNo}
+		)
+	</insert>
+	
+<!-- 	<select id="myAssRsvList" parameterType="string" resultType="assVO"> -->
+<!-- 		SELECT -->
+<!-- 			asr_cd, asset.as_se, asset.as_cd, asr_date, asr_starttime, asr_endtime, asr_reason, emp_no, asset.as_name -->
+<!-- 		FROM -->
+<!-- 			asrent -->
+<!-- 		INNER JOIN asset on asrent.as_cd = asset.as_cd -->
+<!-- 		WHERE -->
+<!-- 			emp_no = #{empNo} -->
+<!-- 		ORDER By asr_date desc -->
+<!-- 	</select> -->
+	<select id="myAssRsvPList" parameterType="asspagingVO" resultType="assVO">
+		select
+		    b.*
+		from(
+		    select
+		        a.*, row_number() over (order by a.asr_cd desc) rnum
+		    from(
+		        SELECT
+		            asr_cd, asset.as_se, asset.as_cd, asr_date, asr_starttime, asr_endtime, asr_reason, emp_no, asset.as_name
+		        FROM
+		            asrent
+		        INNER JOIN asset on asrent.as_cd = asset.as_cd
+		        WHERE
+		            emp_no = #{empNo}
+		            <include refid="assetDateSearch"/>
+		        ORDER By asr_date desc
+		    )a
+		)b
+		<![CDATA[
+			where b.rnum >= #{startRow} and b.rnum <= #{endRow}
+			ORDER By asr_date desc
+		]]>
+	</select>
+
+	<select id="adminAssRsvPList" parameterType="asspagingVO" resultType="assVO">
+		select
+		    b.*
+		from(
+		    select
+		        a.*, row_number() over (order by a.asr_cd desc) rnum
+		    from(
+		        SELECT
+				    asrent.asr_cd, asset.as_se, asset.as_cd, asrent.asr_date, asrent.asr_starttime, asrent.asr_endtime, asrent.asr_reason, asrent.emp_no, asset.as_name
+				    ,emp_name||'('||asrent.emp_no||')/'||dept_name as fullname
+				FROM
+				    asrent
+				INNER JOIN asset on asrent.as_cd = asset.as_cd
+				INNER JOIN emp on asrent.emp_no = emp.emp_no
+				inner join dept on emp.dept_cd = dept.dept_cd
+		            <include refid="assetAdminDateSearch"/>
+		        ORDER By asr_date desc
+		    )a
+		)b
+		<![CDATA[
+			where b.rnum >= #{startRow} and b.rnum <= #{endRow}
+			ORDER By asr_date desc
+		]]>
+	</select>
+	
+	<select id="selectRentList" parameterType="String" resultType="assVO">
+		SELECT
+		    asr_cd
+		  , as_cd
+		  , asr_date
+		  , asr_starttime
+		  , asr_endtime
+		  , asr_reason
+		  , emp_no
+		FROM
+		    asrent
+		where as_cd = #{asCd} and substr(to_char(ASR_DATE),0,10) = substr(to_char(sysdate),0,10)
+	</select>
+	
+	<delete id="myAssetRsvDel" parameterType="assVO">
+		DELETE asrent
+		WHERE asr_cd = #{asrCd}
+	</delete>
+	
+	<delete id="deleteAssetBlock" parameterType="assVO">
+		DELETE FROM asrent
+		WHERE
+		    	as_cd = #{asCd}
+		    AND to_char(asr_date,'yy/MM/dd') = to_char(sysdate,'yy/MM/dd')
+		    AND emp_no = #{empNo}
+	</delete>
+	
+</mapper>

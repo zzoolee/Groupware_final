@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.CommentMapper">
+	
+	<insert id="insertComment" parameterType="commentVO" useGeneratedKeys="true">
+		<selectKey keyProperty="cmNo" resultType="string" order="BEFORE">
+			select seq_comment.nextval from dual
+		</selectKey>
+		INSERT INTO "COMMENT" (
+		    cm_no
+		    , cm_content
+		    , cmwriter_empno
+		    , cm_date
+		    , cm_boardse
+		    , cm_bno
+		) VALUES (
+		    #{cmNo}
+		  , #{cmContent}
+		  , #{cmwriterEmpno}
+		  , sysdate
+		  , #{cmBoardse}
+		  , #{cmBno}
+		)
+	</insert>
+	
+	<select id="selectComment" parameterType="string" resultType="commentVO">
+		SELECT
+    		cm_no
+		  , cm_content
+		  , cmwriter_empno
+		  , cm_date
+		  , cm_boardse
+		  , cm_bno
+		FROM
+		    "COMMENT"
+		WHERE
+			cm_no = #{cmNo}
+	</select>
+	
+	<delete id="deleteComment" parameterType="string">
+		delete from "COMMENT"
+		where
+			cm_no = #{cmNo}
+	</delete>
+	
+	<update id="updateComment" parameterType="commentVO">
+		update "COMMENT"
+		set
+			cm_content = #{cmContent}
+		where
+			cm_no = #{cmNo}
+	</update>
+	<select id="selectCommentFree" parameterType="commentVO" resultType="commentVO">
+	SELECT
+	    CM_NO, CM_CONTENT, CMWRITER_EMPNO, CM_DATE, CM_BOARDSE, CM_BNO
+	FROM "COMMENT"
+	WHERE CM_BOARDSE = #{cmBoardse} AND CM_BNO = #{cmBno}
+	ORDER BY CM_DATE ASC
+	</select>
+	
+</mapper>

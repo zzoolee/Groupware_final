@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.AdminEmpMapper">
+
+	<resultMap type="empVO" id="empMap">
+		<id property="empNo" column="emp_no"/>
+		<result property="empNo" column="emp_no"/>
+		<result property="empPw" column="emp_pw"/>
+		<result property="empName" column="emp_name"/>
+		<result property="empGender" column="emp_gender"/>
+		<result property="empRegno" column="emp_regno"/>
+		<result property="empForeig" column="emp_foreig"/>
+		<result property="deptCd" column="dept_cd"/>
+		<result property="empRank" column="emp_rank"/>
+		<result property="empLevel" column="emp_level"/>
+		<result property="empHp" column="emp_hp"/>
+		<result property="empEmail" column="emp_email"/>
+		<result property="empAdd1" column="emp_add1"/>
+		<result property="empAdd2" column="emp_add2"/>
+		<result property="empHire" column="emp_hire"/>
+		<result property="empPhoto" column="emp_photo"/>
+		<result property="empSign" column="emp_sign"/>
+		<result property="empWorkse" column="emp_workse"/>
+		<result property="empLoginse" column="emp_loginse"/>
+		<result property="notiList" column="noti_list"/>
+		<collection property="deptVO" resultMap="deptMap"/>
+		<collection property="codeVO" resultMap="codeMap"/>
+	</resultMap>
+	
+	<resultMap type="deptVO" id="deptMap">
+		<id property="deptCd" column="dept_cd"/>
+		<result property="deptCd" column="dept_cd"/>
+		<result property="deptName" column="dept_name"/>
+		<result property="deptHeadEmpNo" column="dept_headempno"/>
+		<result property="deptParent" column="dept_parent"/>
+		<result property="deptIcon" column="dept_icon"/>
+	</resultMap>
+	
+	<resultMap type="codeVO" id="codeMap">
+		<id property="cdCd" column="cd_cd"/>
+		<result property="cdCd" column="cd_cd"/>
+		<result property="cdName" column="cd_name"/>
+		<result property="gcCd" column="gc_cd"/>
+	</resultMap>
+	
+	
+	
+	
+	<!-- 사원등록 -->
+	<insert id="insertEmp" parameterType="empVO">
+		INSERT INTO emp (
+		emp_no, emp_pw, emp_name, emp_gender, emp_regno, emp_foreig, dept_cd, emp_rank, emp_level, emp_hp, emp_hire, emp_workse, emp_loginse, enabled, noti_list
+		) VALUES (
+		#{empNo}, #{empPw},#{empName},#{empGender},#{empRegno},#{empForeig},#{deptCd},#{empRank},${empLevel},#{empHp},#{empHire},1,0,1,#{notiList}
+		)
+	</insert>
+	
+	<insert id="inserAuth" parameterType="empVO">
+		INSERT INTO auth (
+    		auth_level, emp_no
+    	) VALUES (
+    	    'ROLE_MEMBER', #{empNo}
+    	)
+	</insert>
+	
+	<!-- 전체사원 조회 -->
+	<select id="selectList" resultMap="empMap">
+		SELECT
+		    emp_no,
+		    emp_pw,
+		    emp_name,
+		    emp_gender,
+		    emp_regno,
+		    emp_foreig,
+		    emp.dept_cd,
+		    emp.emp_rank,
+		    emp_level,
+		    emp_hp,
+		    emp_email,
+		    emp_add1,
+		    emp_add2,
+		    emp_hire,
+		    emp_workse,
+		    emp_loginse,
+		    enabled,
+		    noti_list,
+		    dept.dept_name,
+		    code.cd_name
+		FROM
+		    emp
+			LEFT OUTER JOIN dept ON emp.dept_cd = dept.dept_cd
+			LEFT OUTER JOIN code ON emp.emp_rank = code.cd_cd
+		where not emp.dept_cd is null
+			order by emp_hire desc 
+	</select>
+	
+	<!-- 전체사원 조회(퇴직자 제외) -->
+	<select id="selectWorkEmp" resultMap="empMap">
+		SELECT
+		    emp_no,
+		    emp_pw,
+		    emp_name,
+		    emp_gender,
+		    emp_regno,
+		    emp_foreig,
+		    emp.dept_cd,
+		    emp.emp_rank,
+		    emp_level,
+		    emp_hp,
+		    emp_email,
+		    emp_add1,
+		    emp_add2,
+		    emp_hire,
+		    emp_workse,
+		    emp_loginse,
+		    enabled,
+		    noti_list,
+		    dept.dept_name,
+		    code.cd_name
+		FROM
+		    emp
+			LEFT OUTER JOIN dept ON emp.dept_cd = dept.dept_cd
+			LEFT OUTER JOIN code ON emp.emp_rank = code.cd_cd
+		where not emp.dept_cd is null and emp_workse = 1
+	</select>
+
+	
+	<!--  사원등록 시 사번 생성을 위한 값 추출 -->
+	<select id="selectEmpNumber" parameterType="string" resultType="empVO">
+		select emp_no, to_number(substr(emp_no, 8)) as empCustomNo, dept_cd from emp
+		where emp_no like '%'||#{dept_cd}||'%'
+		order by 1 desc
+	</select>
+	
+	<!-- 재직여부 변경 -->
+	<update id="empWorkseUpdate">
+		<foreach collection="list" item="item" open="declare begin" separator=";" close="; end;">
+			UPDATE emp
+			SET
+			    EMP_WORKSE = #{item.empWorkse}
+			WHERE
+		       	emp_no = #{item.empNo}
+		</foreach>
+	</update>
+	
+	<!-- 사원 디테일 조회 -->
+	<select id="selectOne" parameterType="string" resultMap="empMap">
+		   SELECT
+		    emp_no,
+		    emp_name,
+		    emp_gender,
+		    emp_regno,
+		    emp_foreig,
+		    emp.dept_cd,
+		    emp.emp_rank,
+		    emp_level,
+		    emp_hp,
+		    emp_email,
+		    emp_add1,
+		    emp_add2,
+		    emp_hire,
+		    emp_photo,
+		    emp_sign,
+		    emp_loginse,
+		    noti_list,
+		    dept.dept_name,
+		    code.cd_name
+		FROM
+		    emp
+			LEFT OUTER JOIN dept ON emp.dept_cd = dept.dept_cd
+			LEFT OUTER JOIN code ON emp.emp_rank = code.cd_cd
+		where emp_no = #{empNo}
+	</select>
+	
+	<update id="empUpdate" parameterType="empVO">
+		UPDATE emp
+			SET
+			    DEPT_CD = #{deptCd},
+			    EMP_RANK = #{empRank},
+			    EMP_LEVEL =#{empLevel}
+			WHERE
+		       	emp_no = #{empNo}
+	</update>
+	
+	<insert id="uploadPayFile" parameterType="salaryVO">
+		insert into SALARYLIST(
+		SAL_NO, SAL_GRAMT, SAL_OVERTIMEAMT, SAL_HOLIDAYAMT, SAL_DDCAMT, SAL_NETAMT, SAL_ACTRSFDATE, SAL_BELONGMONTH, EMP_NO
+		)values(
+		#{salNo},#{salGramt},#{salOvertimeamt},#{salHolidayamt},#{salDdcamt},#{salNetamt},#{salActrsfdate},#{salBelongmonth},#{empNo}
+		)
+	</insert>
+</mapper>

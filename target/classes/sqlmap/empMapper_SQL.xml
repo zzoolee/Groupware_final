@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.EmpMapper">
+
+	<resultMap type="empVO" id="empMap">
+		<id property="empNo" column="EMP_NO"/> <!-- 기본키 설정 -->
+		<result property="empNo" column="EMP_NO"/>
+		<result property="empPw" column="EMP_PW"/>
+		<result property="empName" column="EMP_NAME"/>
+		<result property="empGender" column="EMP_GENDER"/>
+		<result property="empRegno" column="EMP_REGNO"/>
+		<result property="empForeig" column="EMP_FOREIG"/>
+		<result property="deptCd" column="DEPT_CD"/>
+		<result property="empRank" column="EMP_RANK"/>
+		<result property="empLevel" column="EMP_LEVEL"/>
+		<result property="empHp" column="EMP_HP"/>
+		<result property="empEmail" column="EMP_EMAIL"/>
+		<result property="empAdd1" column="EMP_ADD1"/>
+		<result property="empAdd2" column="EMP_ADD2"/>
+		<result property="empHire" column="EMP_HIRE"/>
+		<result property="empPhoto" column="EMP_PHOTO"/>
+		<result property="empSign" column="EMP_SIGN"/>
+		<result property="empWorkse" column="EMP_WORKSE"/>
+		<result property="empLoginse" column="EMP_LOGINSE"/>
+		<result property="enabled" column="enabled"/>
+		<result property="notiList" column="NOTI_LIST"/>
+		<result property="fullName" column="full_name"/>
+		<association property="deptVO" javaType="deptVO">
+			<result property="deptCd" column="dept_cd"/>
+			<result property="deptName" column="dept_name"/>
+			<result property="deptHeadEmpNo" column="dept_headempno"/>
+			<result property="deptParent" column="dept_parent"/>
+			<result property="deptIcon" column="dept_icon"/>
+		</association>
+		<association property="codeVO" javaType="codeVO">
+			<result property="cdCd" column="cd_cd"/>
+			<result property="cdName" column="cd_name"/>
+			<result property="gcCd" column="gc_cd"/>
+		</association>
+		<collection property="authList" resultMap="authMap"/>
+	</resultMap>
+	
+	<resultMap type="auth" id="authMap">
+		<result property="empNo" column="EMP_NO"/>
+		<result property="authLevel" column="AUTH_LEVEL"/>
+	</resultMap>
+	
+	<sql id="MyInfoUpdateSql">
+		<if test="empPhoto != null and empPhoto != ''">
+			 EMP_PHOTO = #{empPhoto},
+		</if>
+		<if test="empPhoto != null and empSign != ''">
+			EMP_SIGN = #{empSign},
+		</if>
+	</sql>
+
+	<select id="readByUserId" parameterType="string" resultMap="empMap">
+		select
+			emp.EMP_NO, EMP_PW, EMP_NAME, EMP_GENDER, EMP_REGNO, EMP_FOREIG, emp.DEPT_CD, EMP_RANK, EMP_LEVEL, EMP_HP, 
+			EMP_EMAIL, EMP_ADD1, EMP_ADD2, EMP_HIRE, EMP_PHOTO, EMP_SIGN, EMP_WORKSE, EMP_LOGINSE, ENABLED, NOTI_LIST, AUTH_LEVEL,
+			dept_name, cd_name, EMP_NAME||' '||CD_NAME as full_name
+		from
+			emp
+			left outer join auth on(emp.EMP_NO = auth.EMP_NO)
+			LEFT OUTER JOIN dept ON emp.dept_cd = dept.dept_cd
+			LEFT OUTER JOIN code ON emp.emp_rank = code.cd_cd
+		where emp.EMP_NO = #{empNo}
+	</select>
+	
+	<select id="selectDeptEmp" parameterType="string" resultMap="empMap">
+		select
+			EMP_NO, EMP_PW, EMP_NAME, EMP_GENDER, EMP_REGNO, EMP_FOREIG, emp.DEPT_CD, EMP_RANK, EMP_LEVEL, EMP_HP, 
+			EMP_EMAIL, EMP_ADD1, EMP_ADD2, EMP_HIRE, EMP_PHOTO, EMP_SIGN, EMP_WORKSE, EMP_LOGINSE,
+			dept_name, cd_name, EMP_NAME||' '||CD_NAME as full_name
+		from
+			emp
+			LEFT OUTER JOIN dept ON emp.dept_cd = dept.dept_cd
+			LEFT OUTER JOIN code ON emp.emp_rank = code.cd_cd
+		where emp.DEPT_CD = #{deptCd, jdbcType=VARCHAR}
+			and emp_workse = '1'
+	</select>
+	
+	<!-- 내정보 수정 시 비밀번호 인증 -->
+	<select id="selectCheckPw" parameterType="empVO" resultType="empVO">
+		SELECT
+		    emp_no, emp_pw
+		FROM
+		    emp
+		where emp_no = #{empNo}
+	</select>
+	
+	<!-- 내정보 수정 프로필 이미지, 사원 이미지 모두 바꿀 경우 -->
+	<update id="myInfoUpdate" parameterType="empVO">
+		UPDATE EMP
+		SET
+			<if test="empPw!=null and empPw!=''">
+			 EMP_PW = #{empPw},
+			 </if>
+		     EMP_HP = #{empHp},
+		     EMP_EMAIL = #{empEmail},
+		     EMP_ADD1 = #{empAdd1},
+		     EMP_ADD2 = #{empAdd2},
+		     <include refid="MyInfoUpdateSql"/>
+		     EMP_LOGINSE = '1'
+		WHERE
+	        	EMP_NO = #{empNo}
+	</update>
+	
+	<!-- empNo로 empName 조회 -->
+	<select id="findName" parameterType="String" resultType="String">
+		SELECT EMP_NAME
+		FROM EMP
+		WHERE EMP_NO = #{empNo}
+	</select>
+	
+	<!-- 비밀번호 찾기 비밀번호 조회 -->
+	<select id="findPwCheck" parameterType="empVO" resultType="string">
+		SELECT emp_pw
+		FROM EMP 
+		WHERE EMP_NO = #{empNo} 
+			and EMP_EMAIL = #{empEmail} 
+	</select>
+	
+	<!-- 비밀번호 찾기 비밀번호 업데이트 -->
+	<update id="updatePw" parameterType="empVO">
+		UPDATE EMP
+			SET EMP_PW = #{empPw},
+				EMP_LOGINSE = '0'
+		WHERE EMP_NO = #{empNo}
+	</update>
+	
+	<select id="findSenderEmpPhto" parameterType="String" resultType="String">
+		SELECT EMP_PHOTO
+		FROM EMP
+		WHERE EMP_NO = #{empNo}
+	</select>
+	
+	<!-- 알림 받기 업데이트 -->
+	<update id="updateNotiList" parameterType="empVO">
+		update emp
+		set noti_list = #{notiList}
+		where emp_no = #{empNo}
+	</update>
+	
+	
+</mapper>

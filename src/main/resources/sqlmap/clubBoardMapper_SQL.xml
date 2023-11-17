@@ -1,0 +1,560 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.ClubBoardMapper">
+
+	<insert id="insertClub" parameterType="clubVO" useGeneratedKeys="true">
+		<selectKey keyProperty="clubCd" resultType="String" order="BEFORE"> 
+			SELECT 'CB'||club_seq.nextval FROM dual
+		</selectKey>
+		INSERT INTO club (
+		    club_cd
+		    , club_name
+		    , club_date
+		    , club_info
+		    , club_photo
+		    , club_empno
+		    , club_se
+		    , club_reason
+		) VALUES (
+		    #{clubCd}
+		  , #{clubName}
+		  , sysdate
+		  , #{clubInfo}
+		  , #{clubPhoto, jdbcType=VARCHAR}
+		  , #{clubEmpno}
+		  , 0
+		  , #{clubReason, jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<update id="updateClub" parameterType="clubVO">
+		UPDATE club
+		SET
+		    club_photo = #{clubPhoto}
+		WHERE
+		    club_cd = #{clubCd}
+	</update>
+	
+	<update id="updateClubInfo" parameterType="clubVO">
+		UPDATE club
+		SET
+		    club_info = #{clubInfo}
+		WHERE
+		    club_cd = #{clubCd}
+	</update>
+	
+	<select id="selectMyClub" parameterType="string" resultType="clubVO">
+		SELECT
+		    club_cd
+		  , club_name
+		  , club_date
+		  , club_info
+		  , club_photo
+		  , club_empno
+		  , club_se
+		  , club_reason
+		  , 'clubhead' as my_club
+		FROM
+		    club
+		WHERE
+		    club_se = '1'
+		    and club_empno = #{empNo}
+		    
+		UNION
+		
+		SELECT
+		    club.club_cd
+		  , club_name
+		  , club_date
+		  , club_info
+		  , club_photo
+		  , club_empno
+		  , club_se
+		  , club_reason
+		  , 'clubstandby' as my_club
+		FROM
+		    club
+		    inner join CLUBNOTMEM on club.club_cd = CLUBNOTMEM.club_cd
+		WHERE
+		    club_se = '1'
+		    and cnm_empno = #{empNo}
+		    and CNM_STATUSSE = '대기'
+		
+		UNION
+		
+		SELECT
+		    club.club_cd
+		  , club_name
+		  , club_date
+		  , club_info
+		  , club_photo
+		  , club_empno
+		  , club_se
+		  , club_reason
+		  , 'clubmem' as my_club
+		FROM
+		    club
+		    inner join CLUBMEMBER on club.club_cd = CLUBMEMBER.club_cd
+		WHERE
+		    club_se = '1'
+		    and cm_empno = #{empNo}
+	</select>
+	
+	<select id="selectAllClub" resultType="clubVO">
+		SELECT
+		    club_cd
+		  , club_name
+		  , club_date
+		  , club_info
+		  , club_photo
+		  , club_empno
+		  , club_se
+		  , club_reason
+		FROM
+		    club
+		WHERE club_se = '1'
+	</select>
+	
+	<select id="selectPopularClub" resultType="clubVO">
+		SELECT ROWNUM, a.*
+		FROM
+		(
+		        SELECT
+				    club.club_cd
+				  , club_name
+				  , club_date
+				  , club_info
+				  , club_photo
+				  , club_empno
+				  , club_se
+				  , club_reason
+		          , count(cm_empno) mem_count
+				FROM
+				    club
+		            left outer join clubmember on club.club_cd = clubmember.club_cd
+				WHERE club_se = '1'
+		        GROUP BY 
+				    club.club_cd
+				  , club_name
+				  , club_date
+				  , club_info
+				  , club_photo
+				  , club_empno
+				  , club_se
+				  , club_reason
+		        ORDER BY mem_count desc
+		) a
+		<![CDATA[
+		WHERE
+		    ROWNUM <= 4
+		]]>
+	</select>
+	
+	<select id="selectOneclub" parameterType="string" resultType="clubVO">
+		SELECT
+		    club.club_cd
+		  , club_name
+		  , club_date
+		  , club_info
+		  , club_photo
+		  , club_empno
+		  , emp_name
+		  , count(cm_empno) mem_count
+		FROM
+		    club
+		    inner join emp on emp.emp_no = club.club_empno
+		    left outer join clubmember on club.club_cd = clubmember.club_cd
+	    WHERE club.club_cd = #{clubCd}
+		GROUP BY 
+		    club.club_cd
+		  , club_name
+		  , club_date
+		  , club_info
+		  , club_photo
+		  , club_empno
+		  , emp_name
+	</select>
+	
+	<insert id="insertClubPost" parameterType="clubPostVO">
+		<selectKey keyProperty="cpNo" resultType="string" order="BEFORE">
+			select seq_clubpost.nextval from dual
+		</selectKey>
+		INSERT INTO clubpost (
+		    cp_no
+		    , cp_title
+		    , cp_content
+		    , cp_date
+		    , cp_hit
+		    , cpwriter_empno
+		    , cb_cd
+		    , club_cd
+		) VALUES (
+		    #{cpNo}
+		  , #{cpTitle}
+		  , #{cpContent, jdbcType=VARCHAR}
+		  <if test="cpDate == null">
+		  , sysdate
+		  </if>
+		  <if test="cpDate != null">
+		  , #{cpDate}
+		  </if>
+		  , 0
+		  , #{cpwriterEmpno}
+		  , #{cbCd}
+		  , #{clubCd}
+		)
+	</insert>
+	
+	<select id="selectClubPost" parameterType="clubPostVO" resultType="clubPostVO">
+		SELECT
+		    cp_no
+		  , cp_title
+		  , cp_content
+		  , cp_date
+		  , cp_hit
+		  , cpwriter_empno
+		  , emp_name
+		  , cb_cd
+		  , club_cd
+          , count(cm_no) cm_cnt
+		FROM
+		    clubpost
+		    inner join emp on emp.emp_no = clubpost.cpwriter_empno
+            left outer join 
+            (
+                select cm_no, cm_bno
+                from "COMMENT"
+                where cm_boardse = 'CLUB'
+            ) comm
+            on comm.cm_bno = clubpost.cp_no
+		WHERE
+	    	club_cd = #{clubCd}
+		    and cb_cd = #{cbCd}
+        GROUP BY 
+        	cp_no
+		  , cp_title
+		  , cp_content
+		  , cp_date
+		  , cp_hit
+		  , cpwriter_empno
+		  , emp_name
+		  , cb_cd
+		  , club_cd
+        ORDER BY TO_NUMBER(cp_no) desc
+	</select>
+	
+	<select id="selectClubActivity" parameterType="clubPostVO" resultType="clubPostVO">
+	    SELECT
+		    cp_no
+		  , cp_title
+		  , cp_content
+		  , cp_date
+		  , cb_cd
+		  , club_cd
+		  , file_no
+		  , file_savepath
+		FROM
+		    clubpost
+		    left outer join "FILE" on "FILE".file_no = clubpost.club_cd||'_'||clubpost.cb_cd||clubpost.cp_no
+		WHERE
+			club_cd = #{clubCd}
+		    and cb_cd = #{cbCd}
+		ORDER BY
+			cp_date desc
+	</select>
+	
+	<update id="incrementHit" parameterType="string">
+		update clubpost
+		set
+			cp_hit = cp_hit + 1
+		where cp_no = #{cpNo}
+	</update>
+	
+	<select id="selectClubBoardDetail" parameterType="string" resultType="clubPostVO">
+		SELECT
+		    cp_no
+		  , cp_title
+		  , cp_content
+		  , cp_date
+		  , cp_hit
+		  , cpwriter_empno
+		  , emp_name
+		  , cb_cd
+		  , club_cd
+		FROM
+		    clubpost
+		    inner join emp on emp.emp_no = clubpost.cpwriter_empno
+		WHERE cp_no = #{cpNo}
+	</select>
+	
+	<select id="selectClubBoardFileDetail" parameterType="string" resultType="FileVO">
+		SELECT
+		    file_no
+		  , file_sec
+		  , file_orgname
+		  , file_savename
+		  , file_savepath
+		  , file_size
+		  , file_mime
+		  , file_type
+		FROM
+		    "FILE"
+		WHERE
+			file_no = #{fileNo}
+	</select>
+	
+	<select id="selectClubBoardComment" parameterType="string" resultType="commentVO">
+		SELECT
+		    cm_no
+		  , cm_content
+		  , cmwriter_empno
+		  , emp_name
+		  , emp_photo
+		  , cm_date
+		  , cm_boardse
+		  , cm_bno
+		FROM
+		    "COMMENT"
+		    inner join emp on emp_no = cmwriter_empno
+		WHERE
+		    cm_boardse = 'CLUB'
+		    and cm_bno = #{cpNo}
+		ORDER BY
+			cm_date
+	</select>
+	
+	<update id="updateClubPost" parameterType="clubPostVO">
+		UPDATE clubpost
+		SET
+		    cp_title = #{cpTitle}
+		    , cp_content = #{cpContent}
+		<if test="cpDate != null">
+			, cp_date = #{cpDate}
+		</if>
+		WHERE
+	        cp_no = #{cpNo}
+	</update>
+	
+	<delete id="deleteClubPost" parameterType="string">
+		DELETE FROM clubpost
+		WHERE
+        	cp_no = #{cpNo}
+	</delete>
+	
+	<select id="selectClubAllMember" parameterType="string" resultType="clubAllMemberVO">
+		SELECT
+			join_empno
+		  , emp_name
+		  , emp_hp
+		  , dept_name
+		  , cd_name
+		  , club_cd
+		  , join_content
+		  , join_date
+		  , status
+		FROM
+		(
+		SELECT
+		    cm_empno join_empno
+		  , emp_name
+		  , emp_hp
+		  , dept_name
+		  , cd_name
+		  , club_cd
+		  , null join_content
+		  , cm_date join_date
+		  , cm_rankse status
+		FROM
+		    clubmember
+		    inner join emp on emp.emp_no = clubmember.cm_empno
+		    inner join dept on dept.dept_cd = emp.dept_cd
+		    inner join code on cd_cd = emp.emp_rank
+		WHERE
+			club_cd = #{clubCd}
+		
+		UNION
+		
+		SELECT
+		    cnm_empno join_empno
+		  , emp_name
+		  , emp_hp
+		  , dept_name
+		  , cd_name
+		  , club_cd
+		  , cnm_content join_content
+		  , null join_date
+		  , cnm_statusse status
+		FROM
+		    clubnotmem
+		    inner join emp on emp.emp_no = clubnotmem.cnm_empno
+		    inner join dept on dept.dept_cd = emp.dept_cd
+		    inner join code on cd_cd = emp.emp_rank
+		WHERE
+			club_cd = #{clubCd}
+			and cnm_statusse = '대기'
+		)
+		ORDER BY join_date DESC
+	</select>
+	
+	<select id="selectClubMember" parameterType="string" resultType="clubMemberVO">
+		SELECT
+		    cm_empno
+		FROM
+		    clubmember
+		WHERE
+			club_cd = #{clubCd}
+	</select>
+	
+	<!-- 가입 승인 처리 -->
+	<delete id="deleteFromNotmem" parameterType="clubNotMemVO">
+		DELETE FROM clubnotmem
+		WHERE
+		        cnm_empno = #{cnmEmpno}
+		    AND club_cd = #{clubCd}
+	</delete>
+	
+	<insert id="insertIntoMem" parameterType="clubMemberVO">
+		INSERT INTO clubmember (
+		    cm_empno
+		    , club_cd
+		    , cm_date
+		    , cm_rankse
+		) VALUES (
+		    #{cmEmpno}
+		  , #{clubCd}
+		  , sysdate
+		  , '회원'
+		)
+	</insert>
+	<!-- 가입 승인 처리 -->
+	
+	<!-- 가입 거절 처리 -->
+	<update id="updateNotmem" parameterType="clubNotMemVO">
+		UPDATE clubnotmem
+		SET
+		    cnm_nocontent = #{cnmNocontent}
+		    , cnm_statusse = '거절'
+		WHERE
+		        cnm_empno = #{cnmEmpno}
+		    AND club_cd = #{clubCd}
+	</update>
+	
+	<select id="chkJoinClub" parameterType="clubNotMemVO" resultType="clubNotMemVO">
+		SELECT
+		    cnm_empno
+		  , club_cd
+		  , cnm_content
+		  , cnm_nocontent
+		  , cnm_statusse
+		FROM
+		    clubnotmem
+		WHERE
+		        cnm_empno = #{cnmEmpno}
+		    AND club_cd = #{clubCd}
+		    AND cnm_statusse = '대기'
+	</select>
+	
+	<insert id="joinClub" parameterType="clubNotMemVO">
+		INSERT INTO clubnotmem (
+		    cnm_empno
+		    , club_cd
+		    , cnm_content
+		    , cnm_statusse
+		) VALUES (
+		    #{cnmEmpno}
+		  , #{clubCd}
+		  , #{cnmContent, jdbcType=VARCHAR}
+		  , '대기'
+		)
+	</insert>
+	
+	<delete id="leaveClub" parameterType="clubMemberVO">
+		DELETE FROM clubmember
+		WHERE
+		        cm_empno = #{cmEmpno}
+		    AND club_cd = #{clubCd}
+	</delete>
+	
+	<select id="selectAllClubAdmin" resultType="clubVO">
+		SELECT
+		    club.club_cd
+		  , club_name
+		  , club_date
+		  , club_info
+		  , club_photo
+		  , club_empno
+		  , emp_name
+		  , emp_hp
+		  , dept_name
+		  , cd_name
+		  , club_se
+		  , club_reason
+		  , count(cm_empno) mem_count
+		FROM
+		    club
+		    inner join emp on emp.emp_no = club.club_empno
+		    inner join dept on dept.dept_cd = emp.dept_cd
+		    inner join code on cd_cd = emp.emp_rank
+		    left outer join clubmember on club.club_cd = clubmember.club_cd
+		GROUP BY 
+	        club.club_cd
+	      , club_name
+	      , club_date
+	      , club_info
+	      , club_photo
+	      , club_empno
+	      , emp_name
+	      , emp_hp
+	      , dept_name
+	      , cd_name
+	      , club_se
+	      , club_reason
+		ORDER BY
+		    club_date desc
+	</select>
+	
+	<update id="updateClubStatusShutdown" parameterType="string">
+		UPDATE club
+		SET
+		    club_se = -1
+		WHERE
+        	club_cd = #{clubCd}
+	</update>
+	
+	<update id="updateClubStatusApprove" parameterType="string">
+		UPDATE club
+		SET
+		    club_se = 1
+		WHERE
+        	club_cd = #{clubCd}
+	</update>
+	
+	<delete id="deleteClub" parameterType="string">
+		DELETE FROM club
+		WHERE
+			club_cd = #{clubCd}
+	</delete>
+	
+	<select id="selectClubInfo" parameterType="string" resultType="clubVO">
+		SELECT
+		    club_cd
+		  , club_name
+		  , club_date
+		  , club_info
+		  , club_photo
+		  , club_empno
+		  , emp_name
+		  , dept_name
+		  , club_se
+		  , club_reason
+		FROM
+		    club
+		    inner join emp on emp.emp_no = club.club_empno
+		    inner join dept on dept.dept_cd = emp.dept_cd
+		WHERE
+			club_cd = #{clubCd}  
+	</select>
+
+</mapper>

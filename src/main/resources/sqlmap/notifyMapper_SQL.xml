@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+  <mapper namespace="kr.or.ddit.mapper.NotifyMapper">
+  
+  	<!-- 알림 추가하기 -->
+  	<insert id="insertNotify" parameterType="notifyVO">
+  		insert into notify(
+  			NOTIFY_CD, NOTIFY_CONTENT, NOTIFY_TYPESE, NOTIFY_EMPNO, NOTIFY_DATE
+  		)values(
+  			NOTI_SEQ.nextval, #{notifyContent}, #{notifyTypese}, #{notifyEmpno}, sysdate
+  		)
+  	</insert>
+  
+  	<!-- noticeList 가져오기 -->
+<!--   	<select id="selectNotiList" parameterType="string" resultType="notifyVO"> -->
+<!--   		select   -->
+<!--   		  notify_cd, notify_content, notify_typese, notify_empno, notify_ckse, notify_date -->
+<!--   		from  -->
+<!--   			notify -->
+<!--   		where  -->
+<!--   			notify_typese like '%'||#{notifyTypese}||'%' -->
+<!--   	</select> -->
+  	<!-- 알람 갯수 가져오기 -->
+  	<select id="selecCntNotify" parameterType="string" resultType="int">
+  		select 
+  			count (*)
+  		from notify
+  		where NOTIFY_EMPNO = #{empNo}
+  		and	NOTIFY_CKSE = 'N'	
+  	</select>
+  	<!--  알람 리스트 가져오기 -->
+  	<select id="selectNotifyList" parameterType="string" resultType="notifyVO">
+  		select  
+  		  notify_cd, notify_content, notify_typese, notify_empno, notify_ckse, notify_date
+  		from 
+  			notify
+  		where NOTIFY_EMPNO = #{empNo}
+  		and	NOTIFY_CKSE = 'N'	
+  	</select>
+  	<!-- 알람 상태값 업데이트 -->
+  	<update id="updateNotickse" parameterType="string">
+  		update notify
+  		set 
+  			NOTIFY_CKSE = 'Y'
+  		where
+  			NOTIFY_CD = #{notifyCd}
+  	</update>
+  	<!-- 알람 전체 상태값 업데이트 -->
+  	<update id="notiAllCheck" parameterType="string">
+  		update notify
+  		set 
+  			NOTIFY_CKSE = 'Y'
+  		where
+  			NOTIFY_EMPNO = #{empNo}
+  	</update>
+  	
+  	
+  	
+  </mapper>
+  
+  
+  
+  
+  
+  
+  
+  
+  

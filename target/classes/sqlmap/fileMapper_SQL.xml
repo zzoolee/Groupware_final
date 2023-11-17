@@ -1,0 +1,907 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.FileMapper">
+	
+	
+	<!-- 개인 자료실  -->
+	<!-- 개인자료실 폴더만을 가져오는 쿼리 -->
+	<select id="selectIndFolder" parameterType="folderVO" resultType="folderVO">
+  		  SELECT folder_cd
+  		 , folder_se
+  		 , emp_no
+  		 , folder_name
+  		 , folder_parent
+  		 , folder_delse
+  		 , folder_path
+  		 , folder_uploaddt
+  		 , folder_size
+    	FROM folder
+    	WHERE folder_cd = #{folderCd}
+    			AND emp_no = #{empNo} 
+    			AND folder_se = '개인' 
+    			AND folder_delse = 1
+	</select>
+	<!-- 부서 자료실  -->
+	<!-- 부서자료실 폴더만을 가져오는 쿼리 -->
+	<select id="selectDepFolder" parameterType="folderVO" resultType="folderVO">
+  		  SELECT folder_cd
+  		 , folder_se
+  		 , emp_no
+  		 , folder_name
+  		 , folder_parent
+  		 , folder_delse
+  		 , folder_path
+  		 , folder_uploaddt
+  		 , folder_size
+    	FROM folder
+    	WHERE folder_cd = #{folderCd}
+    			AND folder_se = '부서' 
+    			AND folder_delse = 1
+	</select>
+	<!-- 전사 자료실  -->
+	<!-- 전사 자료실 폴더만을 가져오는 쿼리 -->
+	<select id="selectComFolder" parameterType="folderVO" resultType="folderVO">
+  		  SELECT folder_cd
+  		 , folder_se
+  		 , emp_no
+  		 , folder_name
+  		 , folder_parent
+  		 , folder_delse
+  		 , folder_path
+  		 , folder_uploaddt
+  		 , folder_size
+    	FROM folder
+    	WHERE folder_cd = #{folderSe}
+    			AND folder_se = #{folderSe}
+    			AND folder_delse = 1
+	</select>
+	<!-- 중요 자료실  -->
+	<!-- 중요 자료실 폴더만을 가져오는 쿼리 -->
+	<select id="selectImpFolder" parameterType="folderVO" resultType="folderVO">
+  		  SELECT folder_cd
+  		 , folder_se
+  		 , emp_no
+  		 , folder_name
+  		 , folder_parent
+  		 , folder_delse
+  		 , folder_uploaddt
+  		 , folder_size
+    	FROM folder
+    	WHERE folder_cd = #{folderSe}
+    			AND folder_se = #{folderSe}
+    			AND folder_delse = 1
+	</select>
+	
+	
+
+
+	
+	
+	
+	<!-- 개인 자료실 -->
+	<!-- 개인 자료실 디폴드폴더 유무를 가져오는 쿼리 -->
+	<select id="selectDefaultIndFolder" parameterType="folderVO" resultType="int">
+		SELECT count(*)
+		FROM folder
+		where folder_cd = #{empNo} 
+			  and folder_name = #{empNo} 
+			  and emp_no = #{empNo}
+	</select>
+	<!-- 부서 자료실 -->
+	<!-- 부서 자료실 디폴드폴더 유무를 가져오는 쿼리 -->
+	<select id="selectDefaultDepFolder" parameterType="folderVO" resultType="int">
+		SELECT count(*)
+		FROM folder
+		where folder_cd = #{folderCd}
+			  and folder_se = '부서'
+	</select>
+	<!-- 전사 자료실 -->
+	<!-- 전사 자료실 디폴드폴더 유무를 가져오는 쿼리 -->
+	<select id="selectDefaultComFolder" parameterType="folderVO" resultType="int">
+		SELECT count(*)
+		FROM folder
+		where folder_cd = #{folderSe}
+			  and folder_name = #{folderSe} 
+	</select>
+	<!-- 중요 자료실 -->
+	<!-- 전사 자료실 디폴드폴더 유무를 가져오는 쿼리 -->
+	<select id="selectDefaultImpFolder" parameterType="folderVO" resultType="int">
+		SELECT count(*)
+		FROM folder
+		where folder_cd = #{folderSe}
+			  and folder_name = #{folderSe} 
+	</select>
+	
+	
+	
+	
+	
+	
+	<!-- 개인 자료실 -->
+	<!-- 사원이 개인자료실에 들어갔을때, 회원의 자료실을 구성해주는 SQL쿼리 -->
+	<insert id="insertDefaultIndFolder" parameterType="folderVO">
+		INSERT INTO folder (
+  		  folder_cd
+    		, folder_se
+    		, emp_no
+    		, folder_name
+    		, folder_delse
+    		, folder_uploaddt
+    		, folder_path
+		) VALUES (
+    		#{empNo}
+  			, '개인'
+  			, #{empNo}
+  			, #{empNo}
+  			, 1
+  			, sysdate
+  			, #{folderPath}
+		)
+	</insert>
+	<!-- 부서 자료실 -->
+	<!-- 사원이 부서자료실에 들어갔을때, 회원의 자료실을 구성해주는 SQL쿼리 -->
+	<insert id="insertDefaultDepFolder" parameterType="folderVO">
+		INSERT INTO folder (
+  		  folder_cd
+    		, folder_se
+    		, emp_no
+    		, folder_name
+    		, folder_delse
+    		, folder_uploaddt
+    		, folder_path
+		) VALUES (
+    		#{folderCd}
+  			, '부서'
+  			, #{empNo}
+  			, #{folderCd}
+  			, 1
+  			, sysdate
+  			, #{folderPath}
+		)
+	</insert>
+	<!-- 전사 자료실 -->
+	<!-- 사원이 전사자료실에 들어갔을때, 회원의 자료실을 구성해주는 SQL쿼리 -->
+	<insert id="insertDefaultComFolder" parameterType="folderVO">
+		INSERT INTO folder (
+  		  folder_cd
+    		, folder_se
+    		, emp_no
+    		, folder_name
+    		, folder_delse
+    		, folder_uploaddt
+    		, folder_path
+		) VALUES (
+    		#{folderSe}
+  			, #{folderSe}
+  			, #{empNo}
+  			, #{folderSe}
+  			, 1
+  			, sysdate
+  			, #{folderPath}
+		)
+	</insert>
+	<!-- 중요 자료실 -->
+	<!-- 사원이 중요자료실에 들어갔을때, 회원의 중요자료실을 구성해주는 SQL쿼리 -->
+	<insert id="insertDefaultImpFolder" parameterType="folderVO">
+		INSERT INTO folder (
+  		  folder_cd
+    		, folder_se
+    		, emp_no
+    		, folder_name
+    		, folder_delse
+    		, folder_uploaddt
+    		, folder_path
+		) VALUES (
+    		#{folderSe}
+  			, #{folderSe}
+  			, #{empNo}
+  			, #{folderSe}
+  			, 1
+  			, sysdate
+  			, #{folderPath}
+		)
+	</insert>
+
+
+
+
+
+	<!-- 개인 자료실 -->
+	<!-- 폴더를 생성해주는 sql쿼리 -->
+	<insert id="insertIndFolder" parameterType="folderVO">
+		INSERT INTO folder (
+   			 folder_cd
+   			 , folder_se
+   			 , emp_no
+   			 , folder_name
+   			 , folder_parent
+   			 , folder_delse
+   			 , folder_path
+   			 , folder_uploaddt
+		) VALUES (
+    		'ind' || LPAD(INDFILE_SEQ.NEXTVAL, 7, '0')
+    		, '개인'
+    		, #{empNo}
+    		, #{folderName}
+    		, #{folderParent}
+    		, 1
+    		, #{folderPath}
+    		, sysdate
+		)
+	</insert>
+	<!-- 부서 자료실 -->
+	<!-- 폴더를 생성해주는 sql쿼리 -->
+	<insert id="insertDepFolder" parameterType="folderVO">
+		INSERT INTO folder (
+   			 folder_cd
+   			 , folder_se
+   			 , emp_no
+   			 , folder_name
+   			 , folder_parent
+   			 , folder_delse
+   			 , folder_path
+   			 , folder_uploaddt
+		) VALUES (
+    		'dep' || LPAD(DEPFILE_SEQ.NEXTVAL, 7, '0')
+    		, '부서'
+    		, #{empNo}
+    		, #{folderName}
+    		, #{folderParent}
+    		, 1
+    		, #{folderPath}
+    		, sysdate
+		)
+	</insert>
+	<!-- 전사 자료실 -->
+	<!-- 폴더를 생성해주는 sql쿼리 -->
+	<insert id="insertComFolder" parameterType="folderVO">
+		INSERT INTO folder (
+   			 folder_cd
+   			 , folder_se
+   			 , emp_no
+   			 , folder_name
+   			 , folder_parent
+   			 , folder_delse
+   			 , folder_path
+   			 , folder_uploaddt
+		) VALUES (
+    		'com' || LPAD(COMFILE_SEQ.NEXTVAL, 7, '0')
+    		, #{folderSe}
+    		, #{empNo}
+    		, #{folderName}
+    		, #{folderParent}
+    		, 1
+    		, #{folderPath}
+    		, sysdate
+		)
+	</insert>
+	<!-- 중요자료실 폴더생성 및 파일생성 불가 -->
+
+	
+	
+	
+	
+	<!-- 개인 자료실 -->
+	<!-- 가공된 파일 데이터를 토대로 fileRoom을 인서트 시키는 과정 -->
+	<insert id="insertIndFile" parameterType="folderFileVO">
+		INSERT INTO fileroom (
+    		file_cd
+    		, file_sec
+    		, file_orgname
+    		, file_savename
+    		, file_savepath
+    		, file_size
+    		, file_mime
+    		, file_type
+    		, file_downcnt
+    		, file_uploaddt, 
+    		file_se, file_likese, emp_no
+		) VALUES (
+    		'ind' || LPAD(FOLDERFILE_SEQ.NEXTVAL,8,0)
+    		, #{fileSec}
+    		, #{fileOrgname}
+    		, #{fileSavename}
+    		, #{fileSavepath}
+    		, #{fileSize }
+    		, #{fileMime}
+    		, #{fileType }
+    		, #{fileDowncnt}
+    		, sysdate
+    		, #{fileSe}
+    		, #{fileLikese}
+    		, #{empNo}
+		)
+	</insert>
+	<!-- 부서 자료실 -->
+	<!-- 가공된 파일 데이터를 토대로 fileRoom을 인서트 시키는 과정 -->
+	<insert id="insertDepFile" parameterType="folderFileVO">
+		INSERT INTO fileroom (
+    		file_cd
+    		, file_sec
+    		, file_orgname
+    		, file_savename
+    		, file_savepath
+    		, file_size
+    		, file_mime
+    		, file_type
+    		, file_downcnt
+    		, file_uploaddt
+    		, file_se
+    		, file_likese
+    		, emp_no
+		) VALUES (
+    		'dep' || LPAD(FOLDERFILE_SEQ.NEXTVAL,8,0)
+    		, #{fileSec}
+    		, #{fileOrgname}
+    		, #{fileSavename}
+    		, #{fileSavepath}
+    		, #{fileSize }
+    		, #{fileMime}
+    		, #{fileType }
+    		, #{fileDowncnt}
+    		, sysdate
+    		, '부서'
+    		, #{fileLikese}
+    		, #{empNo}
+		)
+	</insert>
+	<!-- 전사 자료실 -->
+	<!-- 가공된 파일 데이터를 토대로 fileRoom을 인서트 시키는 과정 -->
+	<insert id="insertComFile" parameterType="folderFileVO">
+		INSERT INTO fileroom (
+    		file_cd
+    		, file_sec
+    		, file_orgname
+    		, file_savename
+    		, file_savepath
+    		, file_size
+    		, file_mime
+    		, file_type
+    		, file_downcnt
+    		, file_uploaddt
+    		, file_se
+    		, file_likese
+    		, emp_no
+    		, file_apprse
+		) VALUES (
+    		'com' || LPAD(COMFILE_SEQ.NEXTVAL, 8, '0')
+    		, #{fileSec}
+    		, #{fileOrgname}
+    		, #{fileSavename}
+    		, #{fileSavepath}
+    		, #{fileSize }
+    		, #{fileMime}
+    		, #{fileType }
+    		, #{fileDowncnt}
+    		, sysdate
+    		, #{fileSe}
+    		, #{fileLikese}
+    		, #{empNo}
+    		,
+    		<choose>
+            	<when test="empNo == 'admin'"> '2' </when>
+            <otherwise> '1' </otherwise>
+        </choose>
+		)
+	</insert>
+	<!-- 중요자료실 파일생성 및 폴더생성 불가. -->
+	
+	
+	
+	
+	
+	<!-- 개인자료실 -->
+	<!-- insertIndFile 서비스안에서 mapper로 fileFolder 테이블을 인서트 시키는 sql쿼리 -->
+	<insert id="insertFolderFile" parameterType="folderVO">
+		INSERT INTO folderfile (
+    		folder_cd
+    		, file_cd
+    		, file_sec
+		) VALUES (
+			#{folderCd}
+  			, 'ind' || LPAD(FOLDERFILE_SEQ.CURRVAL,8,0)
+  			, #{fileSec}
+		)
+	</insert>
+	<!-- 부서자료실 -->
+	<!-- insertDepFile 서비스안에서 mapper로 fileFolder 테이블을 인서트 시키는 sql쿼리 -->
+	<insert id="depInsertFolderFile" parameterType="folderVO">
+		INSERT INTO folderfile (
+    		folder_cd
+    		, file_cd
+    		, file_sec
+		) VALUES (
+			#{folderCd}
+  			, 'dep' || LPAD(FOLDERFILE_SEQ.CURRVAL,8,0)
+  			, #{fileSec}
+		)
+	</insert>
+	<!-- 전사자료실 -->
+	<!-- insertDepFile 서비스안에서 mapper로 fileFolder 테이블을 인서트 시키는 sql쿼리 -->
+	<insert id="comInsertFolderFile" parameterType="folderVO">
+		INSERT INTO folderfile (
+    		folder_cd
+    		, file_cd
+    		, file_sec
+		) VALUES (
+			#{folderCd}
+  			, 'com' || LPAD(COMFILE_SEQ.CURRVAL,8,0)
+  			, #{fileSec}
+		)
+	</insert>
+	<!-- 중요자료실 파일생성 및 폴더생성 불가. -->
+
+	
+	
+	
+	<!-- 개인자료실 -->
+	<!-- 좋아요상태를 업데이트 시켜주는 쿼리 -->
+	<update id="updateLikeSe" parameterType="folderFileVO">
+		update fileroom
+    		set file_likese = #{fileLikese}
+    		where file_cd = #{fileCd}
+	</update>
+	<!-- 부서자료실에 좋아요 없음 -->
+	<!-- 전사자료실에 좋아요 없음 -->
+	<!-- 중요자료실 -->
+	<!-- 좋아요상태를 업데이트 시켜주는 쿼리 -->
+
+	<!-- 중요자료실 -->
+	<!-- 중요자료로 표시된 파일들만 가져오는 쿼리 -->
+	<select id="showImpFiles" parameterType="folderVO" resultType="folderFileVO">
+		select *
+		from fileroom
+		where emp_no = #{empNo}
+			  and file_likese = 2
+		order by file_orgname asc
+	</select>
+	<!-- 중요자료실 -->
+	<!-- 중요자료로 표시된 파일들만 업로드 시간순서로 가져오는 쿼리 -->
+	<select id="showImpFilesDate" parameterType="folderVO" resultType="folderFileVO">
+		select *
+		from fileroom
+		where emp_no = #{empNo}
+			  and file_likese = 2
+		order by file_uploaddt desc
+	</select>
+	
+	
+	<!-- 공통 자료실 -->
+	<!-- 공통 자료실 -->
+	<!-- 공통 자료실 -->
+	<!-- 공통 자료실 -->
+	<!-- 공통 자료실 -->
+	<!-- 부모폴더 가져오기 -->
+	<!-- 코드번호가 해당폴더의 '부모폴더'인 폴더를 가져오는 sql쿼리 -->
+	<select id="selectParentFolder" parameterType="folderVO" resultType="folderVO">
+		SELECT folder_cd
+		, folder_se
+		, emp_no
+		, folder_name
+		, folder_parent
+		, folder_path
+		, folder_delse
+		, folder_uploaddt
+		, folder_size
+		FROM folder
+		where folder_cd = #{folderParent }
+	</select>
+	
+	<!-- 공통 자료실 -->
+	<!-- 자식폴더 가져오기 -->
+	<!-- 코드번호가 해당폴더의 '부모폴더'인 폴더를 가져오는 sql쿼리 (가나다정렬) -->
+	<select id="selectChildFolder" parameterType="folderVO" resultType="folderVO">
+		SELECT folder_cd
+		, folder_se
+		, emp_no
+		, folder_name
+		, folder_parent
+		, folder_delse
+		, folder_uploaddt
+		, folder_size
+		FROM folder
+		where folder_parent = #{folderCd }
+		order by folder_name asc
+	</select>
+	
+	<!-- 공통 자료실 -->
+	<!-- 자식폴더 가져오기 -->
+	<!-- 코드번호가 해당폴더의 '부모폴더'인 폴더를 가져오는 sql쿼리 (시간정렬) -->
+	<select id="selectChildFolderDate" parameterType="folderVO" resultType="folderVO">
+		SELECT folder_cd
+		, folder_se
+		, emp_no
+		, folder_name
+		, folder_parent
+		, folder_delse
+		, folder_uploaddt
+		, folder_size
+		FROM folder
+		where folder_parent = #{folderCd }
+		order by folder_uploaddt desc
+	</select>
+	
+	<!-- 공통자료실 -->
+	<!-- 코드번호를 가지고 해당폴더의 자식파일정보를 가져오는 sql쿼리 (가나다정렬) -->
+	<select id="selectChildFile" parameterType="folderVO" resultType="folderFileVO">
+		SELECT
+    		fr.file_cd
+  			, fr.file_sec
+	  		, file_orgname
+  			, file_savename
+  			, file_savepath
+  			, file_size
+  			, file_mime
+  			, file_type
+  			, file_downcnt
+  			, file_uploaddt
+  			, file_se
+  			, file_likese
+  			, file_apprse
+  			, emp_no
+		FROM
+    		fileroom fr, folderfile ff
+		where fr.file_cd = ff.file_cd and ff.folder_cd = #{folderCd}
+		order by file_orgname asc
+	</select>
+	
+	<!-- 공통 자료실 -->
+	<!-- 코드번호를 가지고 해당폴더의 자식파일정보를 가져오는 sql쿼리 (시간정렬) -->
+	<select id="selectChildFileDate" parameterType="folderVO" resultType="folderFileVO">
+		SELECT
+    		fr.file_cd
+  			, fr.file_sec
+	  		, file_orgname
+  			, file_savename
+  			, file_savepath
+  			, file_size
+  			, file_mime
+  			, file_type
+  			, file_downcnt
+  			, file_uploaddt
+  			, file_se
+  			, file_likese
+  			, file_apprse
+  			, emp_no
+		FROM
+    		fileroom fr, folderfile ff
+		where fr.file_cd = ff.file_cd and ff.folder_cd = #{folderCd}
+		order by file_uploaddt desc
+	</select>
+
+	<!-- 공통 자료실 -->
+	<!-- 코드번호를 가지고 본인의 폴더정보를 가져오는 sql쿼리 -->
+	<select id="selectMyselfFolder" parameterType="folderVO" resultType="folderVO">
+		SELECT folder_cd
+		, folder_se
+		, emp_no
+		, folder_name
+		, folder_parent
+		, folder_delse
+		, folder_path
+		, folder_uploaddt
+		, folder_size
+		FROM folder
+		where folder_cd = #{folderCd}
+	</select>
+
+	<!-- 공통 자료실 -->
+	<!-- 코드번호를 가지고 본인의 파일정보 가져오는 sql쿼리 -->
+	<select id="selectMyselfFile" parameterType="folderFileVO" resultType="folderFileVO">
+		SELECT
+    		file_cd
+  			, file_sec
+	  		, file_orgname
+  			, file_savename
+  			, file_savepath
+  			, file_size
+  			, file_mime
+  			, file_type
+  			, file_downcnt
+  			, file_uploaddt
+  			, file_se
+  			, file_likese
+  			, file_apprse
+  			, emp_no
+		FROM
+    		fileroom
+		where file_cd = #{fileCd}
+	</select>
+	
+	<!-- 공통 자료실  -->
+	<!-- 폴더를 삭제시켜주는 쿼리 -->
+	<delete id="deleteFolder">
+		DELETE FROM folder
+		WHERE folder_cd = #{folderCd}
+	</delete>
+
+	<!-- 공통 자료실 -->
+	<!-- 파일내부 폴더 부모값을 삭제하는 쿼리 -->
+	<delete id="deleteFolderFile">
+		DELETE FROM folderfile
+		WHERE file_cd = #{fileCd}
+	</delete>
+	
+	<!-- 공통자료실 -->
+	<!-- 파일자체를 삭제하는 쿼리 -->
+	<delete id="deleteFile">
+		DELETE FROM fileroom
+		WHERE file_cd = #{fileCd}
+	</delete>
+
+	<!-- 공통 자료실 -->
+	<!-- 검색어로 폴더를 찾아내는 쿼리 -->
+	<select id="searchFolderText" parameterType="folderVO" resultType="folderVO">
+		SELECT
+	    	folder_cd
+  			, folder_se
+  			, emp_no
+  			, folder_name
+  			, folder_parent
+  			, folder_delse
+  			, folder_path
+  			, folder_size
+		FROM
+		    folder
+		where folder_parent = #{folderCd} 
+				and folder_name like '%'||#{searchText}||'%'
+	</select>
+	
+	<!-- 공통자료실 -->
+	<!-- 검색어로 파일을 찾아내는 쿼리 -->
+	<select id="searchFileText" parameterType="folderVO" resultType="folderFileVO">
+		SELECT
+   			 fr.file_cd
+  			, fr.file_sec
+  			, file_orgname
+  			, file_savename
+  			, file_savepath
+  			, file_size
+  			, file_mime
+  			, file_type
+  			, file_downcnt
+  			, file_uploaddt
+  			, file_se
+  			, file_likese
+  			, file_apprse
+  			, emp_no
+		FROM
+    		fileroom fr, folderfile ff
+		where fr.file_cd = ff.file_cd 
+				and folder_cd = #{folderCd} 
+				and file_orgname like '%'||#{searchText}||'%'
+	</select>
+	
+	<!-- 중요 자료실 -->
+	<!-- 검색어로 파일을 찾아내는 쿼리 -->
+	<select id="impSearchText" parameterType="folderVO" resultType="folderFileVO">
+		SELECT
+   			 file_cd
+  			, file_sec
+  			, file_orgname
+  			, file_savename
+  			, file_savepath
+  			, file_size
+  			, file_mime
+  			, file_type
+  			, file_downcnt
+  			, file_uploaddt
+  			, file_se
+  			, file_likese
+  			, file_apprse
+  			, emp_no
+		FROM
+    		fileroom
+		where emp_no = #{empNo}
+			  and file_likese = 2
+			  and file_orgname like '%'||#{searchText}||'%'
+	</select>
+	
+	<insert id="folderShare" parameterType="folderVO">
+		INSERT INTO folder (
+    		folder_cd
+    		, folder_se
+    		, emp_no
+    		, folder_name
+    		, folder_parent
+    		, folder_delse
+    		, folder_path
+    		, folder_uploaddt
+    		, folder_size
+		) VALUES (
+    		#{folderCd}
+  			, #{folderSe}
+  			, #{empNo}
+  			, #{folderName}
+  			, #{folderParent}
+  			, #{folderDelse}
+  			, #{folderPath}
+  			, #{folderUploaddt}
+  			, #{folderSize}
+		)
+	</insert>
+	
+	<update id="folderShareUpdate" parameterType="folderVO">
+		UPDATE FOLDER
+		SET FOLDER_PARENT = #{folderParent}
+		WHERE FOLDER_CD = #{folderCd}
+	</update>
+	
+	<!-- 공유 자료실 -->
+	<!-- 가공된 파일 데이터를 토대로 fileRoom을 인서트 시키는 과정 -->
+	<insert id="insertShareFile" parameterType="folderFileVO">
+		INSERT INTO fileroom (
+    		file_cd
+    		, file_sec
+    		, file_orgname
+    		, file_savename
+    		, file_savepath
+    		, file_size
+    		, file_mime
+    		, file_type
+    		, file_downcnt
+    		, file_uploaddt, 
+    		file_se, file_likese, emp_no
+		) VALUES (
+    		#{fileCd}
+    		, #{fileSec}
+    		, #{fileOrgname}
+    		, #{fileSavename}
+    		, #{fileSavepath}
+    		, #{fileSize }
+    		, #{fileMime}
+    		, #{fileType }
+    		, #{fileDowncnt}
+    		, sysdate
+    		, #{fileSe}
+    		, #{fileLikese}
+    		, #{empNo}
+    		
+		)
+	</insert>
+	
+	
+	<select id="selectMyFolderFile" parameterType="folderFileVO" resultType="folderVO">
+		SELECT
+   	 		folder_cd
+  			, file_cd
+  			, file_sec
+			FROM
+    	folderfile
+    	where file_cd = #{fileCd}
+	</select>
+	
+	<insert id="insertShareFolderFile" parameterType="folderVO">
+		INSERT INTO folderfile (
+    		folder_cd
+    		, file_cd
+    		, file_sec
+		) VALUES (
+			#{folderCd}
+  			, #{fileCd}
+  			, #{fileSec}
+		)
+	</insert>
+	
+	<select id="selectAllIndFolders" parameterType="string" resultType="folderVO">
+		SELECT
+    		folder_cd
+  			, folder_se
+  			, emp_no
+  			, folder_name
+  			, folder_parent
+  			, folder_delse
+  			, folder_path
+  			, folder_uploaddt
+  			, folder_size
+		FROM
+    		folder
+		where emp_no = #{empNo}
+			and folder_se = '개인'
+	</select>
+	
+	<select id="selectAllIndFiles" parameterType="string" resultType="folderVO">
+		SELECT
+    		f.folder_cd
+  			, folder_se
+  			, emp_no
+  			, folder_name
+  			, folder_parent
+  			, folder_delse
+  			, folder_path
+  			, folder_uploaddt
+  			, folder_size
+  			, file_cd
+		FROM
+    		folder f, folderfile ff
+		where 
+			f.folder_cd = ff.folder_cd 
+			and f.folder_se = '개인' 
+			and emp_no = #{empNo}
+	</select>
+	
+	<select id="selectAllDeptList" resultType="deptVO">
+		SELECT
+    		dept_cd
+  			, dept_name
+  			, dept_headempno
+  			, dept_parent
+  			, dept_icon
+		FROM
+    		dept
+	</select>
+	
+	<!-- HashMap을 파라미터로 해주면 알아서 형변환을 해준다. -->
+	<update id="updateFolderSize" parameterType="string">
+		 UPDATE folder
+			SET
+    			FOLDER_SIZE = 
+	        		(SELECT NVL(SUM(FILE_SIZE),0)
+         			FROM FILEROOM
+         			WHERE FILE_CD IN 
+	             		(SELECT FILE_CD
+              			FROM FOLDERFILE
+              			WHERE FOLDER_CD = #{folderCd})
+        			) +
+        			((SELECT  NVL(SUM(FOLDER_SIZE),0)
+         			FROM FOLDER
+         			WHERE folder_parent IN #{folderCd}))
+			WHERE
+	    		FOLDER_CD = #{folderCd}
+	</update>
+	
+	<select id="selectMyselfFolderFile" parameterType = "string" resultType = "string">
+		SELECT
+    		folder_cd
+		FROM
+		    folderfile
+		where file_Cd = #{fileCd}
+	</select>
+	
+	<update id="comFileResYes" parameterType="folderFileVO">
+		UPDATE fileroom
+		SET
+    		file_apprse = 2
+		WHERE
+		    file_cd = #{fileCd}
+	</update>
+	
+	<select id="selectApprList" resultType="folderFileVO">
+		SELECT
+    		*
+		FROM
+		    fileroom
+		where 
+	    	file_apprse = 1
+		order by file_uploaddt desc
+	</select>
+	
+	<select id="selectAppr" parameterType="string" resultType="folderFileVO">
+		SELECT
+    		*
+		FROM
+		    fileroom
+		where 
+	    	file_apprse = 1
+	    	and emp_no = #{empNo}
+		order by file_uploaddt desc
+	</select>
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

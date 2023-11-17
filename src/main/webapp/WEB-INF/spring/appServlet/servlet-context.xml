@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/mvc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xmlns:websocket="http://www.springframework.org/schema/websocket"
+	xsi:schemaLocation="http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd
+		http://www.springframework.org/schema/websocket http://www.springframework.org/schema/websocket/spring-websocket.xsd
+		http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- DispatcherServlet Context: defines this servlet's request-processing infrastructure -->
+	
+	<!-- Enables the Spring MVC @Controller programming model -->
+	<annotation-driven />
+
+	<!-- Handles HTTP GET requests for /resources/** by efficiently serving up static resources in the ${webappRoot}/resources directory -->
+	<resources mapping="/resources/**" location="/resources/" />
+
+	<!-- Resolves views selected for rendering by @Controllers to .jsp resources in the /WEB-INF/views directory -->
+	<beans:bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<beans:property name="prefix" value="/WEB-INF/views/" />
+		<beans:property name="suffix" value=".jsp" />
+		<beans:property name="order" value="2" />
+	</beans:bean>
+	
+	<!-- Tiles 설정 시작 -->
+	<beans:bean id="tilesViewResolver" class="org.springframework.web.servlet.view.UrlBasedViewResolver">
+		<beans:property name="viewClass" value="org.springframework.web.servlet.view.tiles3.TilesView"/>
+		<beans:property name="order" value="1"/> <!-- 먼저 잡는다 -->
+	</beans:bean>
+	
+	<beans:bean id="tilesConfigurer" class="org.springframework.web.servlet.view.tiles3.TilesConfigurer">
+		<beans:property name="definitions">
+			<beans:list>
+				<beans:value>/WEB-INF/spring/tiles-config.xml</beans:value>
+			</beans:list>
+		</beans:property>
+	</beans:bean>
+	<!-- Tiles 설정 끝 -->
+	
+	<!-- 웹소켓 핸들러 추가 -->
+	<websocket:handlers>
+		<websocket:mapping handler="chatHandler" path="/chat"/>
+		<websocket:mapping handler="notifyHandler" path="/alarm"/>
+	</websocket:handlers>
+	<beans:bean id="chatHandler" class="kr.or.ddit.handler.ChatHandler"></beans:bean>
+	<beans:bean id="notifyHandler" class="kr.or.ddit.handler.NotifyHandler"></beans:bean>
+	
+	<!-- 메일 bean 추가 -->
+	<!-- Gmail 이용 시 -->
+	<beans:bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+		<beans:property name="host" value="smtp.gmail.com"/>
+		<beans:property name="port" value="587"/>
+		<beans:property name="username" value="dhkek567@gmail.com"/>
+		<beans:property name="password" value="rplk yima vxqm qumh"/>
+		<beans:property name="javaMailProperties">
+			<beans:props>
+				<beans:prop key="mail.smtp.transport.protocol">SMTP</beans:prop>
+				<beans:prop key="mail.smtp.auth">true</beans:prop>
+				<beans:prop key="mail.smtp.starttls.enable">true</beans:prop>
+				<beans:prop key="mail.smtp.ssl.protocols">TLSv1.2</beans:prop>
+				<beans:prop key="mail.debug">true</beans:prop>
+			</beans:props>
+		</beans:property>
+	</beans:bean>
+	<!-- 메일 bean 추가 -->
+
+	<!-- component-scan 한 줄로 되어있으면 트랜잭션 처리하지 않음 (egov-com-servlet.xml 참고) -->	
+	<context:component-scan base-package="kr.or.ddit" />
+<!-- 	<context:component-scan base-package="kr.or.ddit"> -->
+<!-- 		<context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/> -->
+<!-- 		<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service"/> -->
+<!-- 		<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Repository"/> -->
+<!-- 	</context:component-scan> -->
+	
+<!-- 		서블릿 표준용 miltipartResolver를 스프링 빈으로 정의 -->
+<!-- 		StandardServletMultipartResolver 사용 시 설정 -->
+<!-- 		> Servlet 3.0의 part를 이용한 MultipartFile 데이터 처리 -->
+	
+	<!-- Namespaces에서 security 버전 없는 걸로 추가 -->
+	<security:global-method-security pre-post-annotations="enabled" secured-annotations="enabled"/>
+	
+</beans:beans>

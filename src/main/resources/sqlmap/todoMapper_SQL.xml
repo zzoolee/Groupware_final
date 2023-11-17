@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.TodoMapper">
+
+	
+<!-- todolist to 등록 -->
+	<insert id="registerTodo" parameterType="todoListVO">
+		INSERT INTO todolist (
+		    emp_no,
+		    todo_content,
+		    todo_checkse,
+		    todo_date,
+		    todo_cd
+		) VALUES (
+		    #{empNo},
+		    #{todoContent},
+		    'N',
+		    sysdate,
+		    SEQ_TODO.nextval
+		)
+	</insert>
+	<!-- todoList 조회 -->
+	<select id="selectTodoList" parameterType="string" resultType="todoListVO">
+		SELECT
+		    emp_no,
+		    todo_content,
+		    todo_checkse,
+		    todo_date,
+		    todo_cd
+		FROM
+		    todolist
+		WHERE EMP_NO = #{empNo}
+		order by todo_date desc
+	</select>
+	
+	<update id="updateTodo" parameterType="todoListVO">
+		update todolist
+		set 
+			todo_content = #{todoContent},
+			todo_date = sysdate
+		where 
+			todo_cd = #{todoCd}
+	</update>
+	
+	
+	<update id="updateTodoCheckse"  parameterType="todoListVO">
+		update todolist
+		set 
+			todo_checkse = #{todoCheckse}
+		where 
+			todo_cd = #{todoCd}
+	</update>
+	
+	<delete id="deleteTodoList" parameterType="string">
+		delete from todolist
+		where todo_cd = #{todoCd}
+	</delete>
+	
+	<select id="selectTodoCnt" parameterType="string" resultType="int">
+		select count (*)
+		from todolist
+		where emp_no = #{empNo}
+	</select>
+</mapper>
